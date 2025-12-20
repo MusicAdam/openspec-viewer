@@ -12,15 +12,15 @@
 }
 
 .markdown-body h2 {
-  @apply text-2xl font-semibold mt-6 mb-3 text-gray-100;
+  @apply text-2xl font-semibold mt-8 mb-4 text-gray-100;
 }
 
 .markdown-body h3 {
-  @apply text-xl font-semibold mt-5 mb-2 text-gray-200;
+  @apply text-xl font-semibold mt-6 mb-3 text-gray-200;
 }
 
 .markdown-body h4 {
-  @apply text-lg font-medium mt-4 mb-2 text-gray-200;
+  @apply text-lg font-medium mt-5 mb-2 text-gray-200;
 }
 
 .markdown-body p {
@@ -40,50 +40,114 @@
 }
 
 .markdown-body li {
-  @apply my-1;
+  @apply my-1.5 leading-relaxed;
 }
 
+/* Nested lists - better visual hierarchy */
+.markdown-body ul ul,
+.markdown-body ol ul,
+.markdown-body ul ol,
+.markdown-body ol ol {
+  @apply my-2 ml-2;
+}
+
+.markdown-body ul ul {
+  list-style-type: circle;
+}
+
+.markdown-body ul ul ul {
+  list-style-type: square;
+}
+
+/* Task list styling */
+.markdown-body li:has(> input[type="checkbox"]) {
+  @apply list-none -ml-6 pl-0;
+}
+
+.markdown-body input[type="checkbox"] {
+  @apply w-4 h-4 mr-3 rounded border-2 border-gray-500 bg-gray-800
+         appearance-none cursor-pointer relative align-middle;
+  margin-top: -2px;
+}
+
+.markdown-body input[type="checkbox"]:checked {
+  @apply bg-emerald-600 border-emerald-600;
+}
+
+.markdown-body input[type="checkbox"]:checked::after {
+  content: '✓';
+  @apply absolute inset-0 flex items-center justify-center text-white text-xs font-bold;
+}
+
+/* Completed task text styling */
+.markdown-body li:has(> input[type="checkbox"]:checked) {
+  @apply text-gray-500;
+}
+
+/* Inline code - more subtle, professional look */
 .markdown-body code {
-  @apply bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-pink-400;
+  @apply bg-gray-800/80 px-2 py-1 rounded text-sm font-mono text-cyan-400
+         border border-gray-700/50;
 }
 
+/* Code blocks */
 .markdown-body pre {
-  @apply bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700;
+  @apply bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto my-4
+         border border-gray-700/50 shadow-lg;
 }
 
 .markdown-body pre code {
-  @apply bg-transparent px-0 py-0 text-gray-100;
+  @apply bg-transparent px-0 py-0 text-gray-100 border-0;
 }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-gray-600 pl-4 italic text-gray-400 my-4;
+  @apply border-l-4 border-blue-500/50 pl-4 italic text-gray-400 my-4
+         bg-gray-800/30 py-2 pr-4 rounded-r;
 }
 
 .markdown-body a {
-  @apply text-blue-400 hover:underline;
+  @apply text-blue-400 hover:text-blue-300 hover:underline transition-colors;
 }
 
 .markdown-body table {
-  @apply w-full border-collapse my-4;
+  @apply w-full border-collapse my-4 text-sm;
 }
 
 .markdown-body th, .markdown-body td {
-  @apply border border-gray-700 px-4 py-2 text-left;
+  @apply border border-gray-700 px-4 py-2.5 text-left;
 }
 
 .markdown-body th {
   @apply bg-gray-800 font-semibold text-gray-200;
 }
 
+.markdown-body tr:nth-child(even) td {
+  @apply bg-gray-800/30;
+}
+
+/* Horizontal rule */
+.markdown-body hr {
+  @apply border-gray-700 my-8;
+}
+
+/* Strong and emphasis */
+.markdown-body strong {
+  @apply text-gray-100 font-semibold;
+}
+
+.markdown-body em {
+  @apply text-gray-300;
+}
+
 /* Diff highlighting */
 .diff-added {
-  @apply bg-green-900/50 border-l-4 border-green-500;
+  @apply bg-green-900/40 border-l-4 border-green-500 pl-3 rounded-r;
 }
 
 .diff-modified {
-  @apply bg-yellow-900/50 border-l-4 border-yellow-500;
+  @apply bg-yellow-900/40 border-l-4 border-yellow-500 pl-3 rounded-r;
 }
 
 .diff-removed {
-  @apply bg-red-900/50 border-l-4 border-red-500;
+  @apply bg-red-900/40 border-l-4 border-red-500 pl-3 rounded-r;
 }
