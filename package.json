@@ -15,7 +15,8 @@
     "build:server": "tsc",
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "start": "node dist/cli/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "openspec",
@@ -24,8 +25,16 @@
     "cli",
     "documentation"
   ],
-  "author": "",
+  "author": "MusicAdam",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MusicAdam/openspec-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MusicAdam/openspec-viewer/issues"
+  },
+  "homepage": "https://github.com/MusicAdam/openspec-viewer#readme",
   "engines": {
     "node": ">=20.0.0"
   },
