@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getChange, type Change } from '../lib/api';
-  import { navigateTo } from '../stores/index';
+  import { navigateTo, changesRefreshTrigger } from '../stores/index';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import TaskProgress from './TaskProgress.svelte';
 
@@ -11,10 +11,18 @@
   let loading = true;
   let error: string | null = null;
   let activeTab: 'proposal' | 'tasks' | 'design' | 'deltas' = 'proposal';
+  let lastRefreshTrigger = 0;
 
   onMount(async () => {
     await loadChange();
+    lastRefreshTrigger = $changesRefreshTrigger;
   });
+
+  // React to WebSocket refresh signals
+  $: if ($changesRefreshTrigger > lastRefreshTrigger) {
+    lastRefreshTrigger = $changesRefreshTrigger;
+    loadChange();
+  }
 
   async function loadChange() {
     loading = true;

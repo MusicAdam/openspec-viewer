@@ -19,6 +19,10 @@ export const currentRoute = writable<string>('/');
 export const searchQuery = writable('');
 export const toasts = writable<{ id: number; message: string; type: 'info' | 'success' | 'error' }[]>([]);
 
+// Refresh triggers - increment to signal components to reload their data
+export const specsRefreshTrigger = writable(0);
+export const changesRefreshTrigger = writable(0);
+
 let toastId = 0;
 
 export function addToast(message: string, type: 'info' | 'success' | 'error' = 'info') {
@@ -72,12 +76,14 @@ export function setupWebSocket() {
       if (entity === 'all' || entity === 'specs') {
         const specsData = await getSpecs();
         specs.set(specsData);
+        specsRefreshTrigger.update((n) => n + 1);
       }
 
       if (entity === 'all' || entity === 'changes') {
         const changesData = await getChanges();
         activeChanges.set(changesData.active);
         archivedChanges.set(changesData.archived);
+        changesRefreshTrigger.update((n) => n + 1);
       }
 
       // Always refresh stats

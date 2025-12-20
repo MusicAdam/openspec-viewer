@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getSpec, type Spec } from '../lib/api';
-  import { navigateTo } from '../stores/index';
+  import { navigateTo, specsRefreshTrigger } from '../stores/index';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
 
   export let specName: string;
@@ -10,10 +10,18 @@
   let loading = true;
   let error: string | null = null;
   let activeTab: 'spec' | 'design' = 'spec';
+  let lastRefreshTrigger = 0;
 
   onMount(async () => {
     await loadSpec();
+    lastRefreshTrigger = $specsRefreshTrigger;
   });
+
+  // React to WebSocket refresh signals
+  $: if ($specsRefreshTrigger > lastRefreshTrigger) {
+    lastRefreshTrigger = $specsRefreshTrigger;
+    loadSpec();
+  }
 
   async function loadSpec() {
     loading = true;
