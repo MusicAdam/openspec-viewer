@@ -1,4 +1,5 @@
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
+import { tick } from 'svelte';
 import type { Project, Stats, SpecSummary, ChangeSummary } from '../lib/api';
 import { getProject, getStats, getSpecs, getChanges } from '../lib/api';
 import { wsClient, type WSMessage } from '../lib/websocket';
@@ -67,6 +68,7 @@ export function setupWebSocket() {
   return wsClient.subscribe(async (message: WSMessage) => {
     if (message.type === 'data:refresh') {
       const entity = message.entity;
+      const scrollY = window.scrollY;
 
       if (entity === 'all' || entity === 'project') {
         const projectData = await getProject();
@@ -95,6 +97,10 @@ export function setupWebSocket() {
         const entityName = message.entityId || entity;
         addToast(`Updated: ${entityName}`, 'info');
       }
+
+      // Restore scroll position after DOM updates
+      await tick();
+      window.scrollTo(0, scrollY);
     }
   });
 }

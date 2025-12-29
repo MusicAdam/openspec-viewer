@@ -38,9 +38,37 @@ openspec-viewer --no-open          # Don't auto-open browser
 
 - Live file watching with auto-refresh
 - Markdown rendering for specs, changes, and proposals
-- Task progress tracking
+- **HTML mockup rendering** - View interactive HTML mockups directly in the viewer
+- Task progress tracking with checkbox parsing
 - Search across all content
 - Dark mode UI
+- Grouped tab navigation for change files
+
+## HTML Mockups Support
+
+The viewer supports rendering HTML files alongside markdown in your change directories. This is perfect for:
+
+- **UI/UX mockups** - Interactive prototypes with full CSS/JS support
+- **Design documentation** - Visual specifications with styling
+- **Component demos** - Live examples of UI components
+
+### How it works
+
+Simply add `.html` files anywhere in your change directory:
+
+```
+changes/add-login-feature/
+├── proposal.md           # Proposal tab
+├── tasks.md              # Tasks tab
+├── design.md             # Design tab
+├── mockups/              # Mockups tab (grouped)
+│   ├── login-form.html   # Interactive mockup
+│   └── error-states.html # Another mockup
+└── specs/
+    └── auth/spec.md      # Spec Deltas tab
+```
+
+HTML files are rendered in a sandboxed iframe with full styling support. Files in subdirectories (like `mockups/`) are automatically grouped into their own tab.
 
 ## OpenSpec Format
 
@@ -49,7 +77,20 @@ openspec-viewer --no-open          # Don't auto-open browser
 - `project.md` - Project conventions
 - `specs/` - Current specifications
 - `changes/` - Change proposals with `proposal.md`, `tasks.md`, `design.md`
-- `changes/archive/` - Completed changes
+- `changes/archive/` - Completed changes with date prefix
+
+### Change Directory Structure
+
+Each change can contain:
+
+| File/Folder | Description |
+|-------------|-------------|
+| `proposal.md` | Change proposal and rationale |
+| `tasks.md` | Implementation checklist (supports `- [ ]` checkboxes) |
+| `design.md` | Technical design documentation |
+| `specs/` | Spec delta files showing ADDED/MODIFIED/REMOVED requirements |
+| `mockups/` | HTML/Markdown mockups and visual documentation |
+| `*.md`, `*.html` | Any additional documentation files |
 
 ## License
 

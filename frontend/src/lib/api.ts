@@ -26,6 +26,22 @@ export interface TaskProgress {
   percentage: number;
 }
 
+export interface ChangeFile {
+  name: string;
+  path: string;
+  absolutePath: string;
+  type: 'markdown' | 'html';
+  folder: string;
+  content?: string;
+}
+
+export interface FileGroup {
+  name: string;
+  folder: string;
+  files: ChangeFile[];
+  isCore: boolean;
+}
+
 export interface ChangeSummary {
   name: string;
   path: string;
@@ -35,6 +51,9 @@ export interface ChangeSummary {
   specDeltaCount: number;
   hasProposal: boolean;
   hasDesign: boolean;
+  fileCount: number;
+  groupCount: number;
+  hasHtmlFiles: boolean;
 }
 
 export interface Task {
@@ -67,6 +86,8 @@ export interface Change {
   taskProgress: TaskProgress;
   design: string | null;
   specDeltas: SpecDelta[];
+  files: ChangeFile[];
+  fileGroups: FileGroup[];
 }
 
 export interface Stats {
@@ -124,4 +145,8 @@ export async function getStats(): Promise<Stats> {
 export async function search(query: string): Promise<SearchResult[]> {
   const data = await fetchApi<{ results: SearchResult[] }>(`/search?q=${encodeURIComponent(query)}`);
   return data.results;
+}
+
+export function getChangeFileUrl(changeName: string, filePath: string): string {
+  return `${API_BASE}/changes/${encodeURIComponent(changeName)}/files/${filePath}`;
 }

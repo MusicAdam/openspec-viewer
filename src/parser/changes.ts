@@ -1,7 +1,130 @@
 import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
-import type { Change, SpecDelta, DeltaOperation, ParseResult } from '../shared/types.js';
+import type { Change, ChangeFile, FileGroup, SpecDelta, DeltaOperation, ParseResult } from '../shared/types.js';
 import { parseTasks } from './tasks.js';
+
+/**
+ * Recursively discover all .md and .html files in a change directory
+ * Excludes the specs/ subdirectory (handled separately as spec deltas)
+ */
+async function discoverChangeFiles(
+  changePath: string,
+  relativePath: string = ''
+): Promise<ChangeFile[]> {
+  const files: ChangeFile[] = [];
+  const currentPath = join(changePath, relativePath);
+
+  try {
+    const entries = await readdir(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryRelPath = relativePath ? join(relativePath, entry.name) : entry.name;
+
+      if (entry.isDirectory()) {
+        // Skip specs/ directory (handled separately as spec deltas)
+        if (entry.name === 'specs') continue;
+
+        // Recurse into subdirectories
+        const subFiles = await discoverChangeFiles(changePath, entryRelPath);
+        files.push(...subFiles);
+      } else if (entry.isFile()) {
+        const ext = entry.name.toLowerCase();
+        if (ext.endsWith('.md') || ext.endsWith('.html')) {
+          const isHtml = ext.endsWith('.html');
+          const folder = relativePath || 'root';
+          const nameWithoutExt = entry.name.replace(/\.(md|html)$/i, '');
+
+          files.push({
+            name: nameWithoutExt,
+            path: entryRelPath,
+            absolutePath: join(currentPath, entry.name),
+            type: isHtml ? 'html' : 'markdown',
+            folder,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    // Directory doesn't exist or can't be read
+  }
+
+  return files;
+}
+
+/**
+ * Capitalize first letter of a string
+ */
+function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Group files by folder for tab navigation
+ * Core files (proposal, tasks, design) each get their own tab
+ * Other files are grouped by folder
+ */
+function groupChangeFiles(files: ChangeFile[]): FileGroup[] {
+  const coreFileNames = ['proposal', 'tasks', 'design'];
+  const coreOrder: Record<string, number> = { proposal: 0, tasks: 1, design: 2 };
+  const groups: FileGroup[] = [];
+
+  // Separate core files from others
+  const coreFiles: ChangeFile[] = [];
+  const otherFiles: ChangeFile[] = [];
+
+  for (const file of files) {
+    if (file.folder === 'root' && coreFileNames.includes(file.name.toLowerCase())) {
+      coreFiles.push(file);
+    } else {
+      otherFiles.push(file);
+    }
+  }
+
+  // Sort core files in specific order and create individual tabs for each
+  coreFiles.sort((a, b) =>
+    (coreOrder[a.name.toLowerCase()] ?? 99) - (coreOrder[b.name.toLowerCase()] ?? 99)
+  );
+
+  for (const file of coreFiles) {
+    groups.push({
+      name: capitalizeFirst(file.name),
+      folder: '',
+      files: [file],
+      isCore: true,
+    });
+  }
+
+  // Group remaining files by folder
+  const folderGroups: Map<string, FileGroup> = new Map();
+
+  for (const file of otherFiles) {
+    const folderKey = file.folder === 'root' ? 'Other' : file.folder;
+    const displayName = file.folder === 'root' ? 'Other' : capitalizeFirst(file.folder);
+
+    if (!folderGroups.has(folderKey)) {
+      folderGroups.set(folderKey, {
+        name: displayName,
+        folder: file.folder,
+        files: [],
+        isCore: false,
+      });
+    }
+    folderGroups.get(folderKey)!.files.push(file);
+  }
+
+  // Sort files within each folder group alphabetically
+  for (const group of folderGroups.values()) {
+    group.files.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Add folder groups sorted alphabetically after core tabs
+  const sortedFolderGroups = Array.from(folderGroups.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  groups.push(...sortedFolderGroups);
+
+  return groups;
+}
 
 /**
  * Parse all changes from the changes/ directory
@@ -113,34 +236,33 @@ async function parseChange(
     }
   }
 
-  // Read proposal.md
-  let proposal: string | null = null;
-  try {
-    proposal = await readFile(join(changePath, 'proposal.md'), 'utf-8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      warnings.push(`${name}: Failed to read proposal.md`);
+  // Discover all .md and .html files recursively
+  const files = await discoverChangeFiles(changePath);
+
+  // Load content for markdown files
+  for (const file of files) {
+    if (file.type === 'markdown') {
+      try {
+        file.content = await readFile(file.absolutePath, 'utf-8');
+      } catch (error) {
+        warnings.push(`${name}: Failed to read ${file.path}`);
+      }
     }
   }
 
-  // Read and parse tasks.md
-  let tasksContent: string | null = null;
-  try {
-    tasksContent = await readFile(join(changePath, 'tasks.md'), 'utf-8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      warnings.push(`${name}: Failed to read tasks.md`);
-    }
-  }
+  // Group files for UI
+  const fileGroups = groupChangeFiles(files);
+
+  // Extract legacy fields for backward compatibility
+  const proposalFile = files.find(f => f.folder === 'root' && f.name.toLowerCase() === 'proposal');
+  const tasksFile = files.find(f => f.folder === 'root' && f.name.toLowerCase() === 'tasks');
+  const designFile = files.find(f => f.folder === 'root' && f.name.toLowerCase() === 'design');
+
+  const proposal = proposalFile?.content ?? null;
+  const tasksContent = tasksFile?.content ?? null;
+  const design = designFile?.content ?? null;
+
   const { tasks, progress: taskProgress } = parseTasks(tasksContent || '');
-
-  // Read design.md (optional)
-  let design: string | null = null;
-  try {
-    design = await readFile(join(changePath, 'design.md'), 'utf-8');
-  } catch (error) {
-    // design.md is optional
-  }
 
   // Parse spec deltas
   const specDeltas = await parseSpecDeltas(join(changePath, 'specs'));
@@ -157,6 +279,8 @@ async function parseChange(
       taskProgress,
       design,
       specDeltas: specDeltas.data,
+      files,
+      fileGroups,
     },
     errors,
     warnings,

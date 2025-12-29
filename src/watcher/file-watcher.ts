@@ -31,8 +31,8 @@ export function createFileWatcher(
   });
 
   const handleEvent = (eventType: 'add' | 'change' | 'unlink') => (filePath: string) => {
-    // Only watch .md files
-    if (!filePath.endsWith('.md')) {
+    // Only watch .md and .html files
+    if (!filePath.endsWith('.md') && !filePath.endsWith('.html')) {
       return;
     }
 

@@ -27,6 +27,22 @@ export interface TaskProgress {
   percentage: number;
 }
 
+export interface ChangeFile {
+  name: string;              // Display name (filename without extension)
+  path: string;              // Relative path from change root
+  absolutePath: string;      // Full filesystem path
+  type: 'markdown' | 'html';
+  folder: string;            // Folder name ("root" for top-level)
+  content?: string;          // Content (markdown only; HTML served via API)
+}
+
+export interface FileGroup {
+  name: string;              // Display name (e.g., "Core", "Mockups")
+  folder: string;            // Folder path
+  files: ChangeFile[];
+  isCore: boolean;           // True for proposal/tasks/design group
+}
+
 export interface Change {
   name: string;
   path: string;
@@ -38,6 +54,9 @@ export interface Change {
   taskProgress: TaskProgress;
   design: string | null;
   specDeltas: SpecDelta[];
+  // Generic files collection
+  files: ChangeFile[];
+  fileGroups: FileGroup[];
 }
 
 export interface SpecDelta {

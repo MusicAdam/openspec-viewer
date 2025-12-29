@@ -49,6 +49,19 @@ OpenSpec is a specification-driven development framework with:
 - `project.md` - Project conventions
 - `specs/` - Current specifications (what IS built)
 - `changes/` - Proposals for changes (what SHOULD change)
-  - `proposal.md`, `tasks.md`, `design.md`
+  - `proposal.md`, `tasks.md`, `design.md` - Each gets its own tab
   - `specs/` subdirectory with delta changes (ADDED/MODIFIED/REMOVED)
+  - `mockups/` or any subdirectory - HTML/MD files grouped by folder
 - `changes/archive/` - Completed changes with date prefix
+
+## File Rendering
+
+The viewer supports rendering arbitrary `.md` and `.html` files in change directories:
+
+- **Markdown files**: Rendered with syntax highlighting and GitHub-flavored markdown
+- **HTML files**: Rendered in sandboxed iframes with full CSS/JS support
+
+Files are organized into tabs:
+1. Core files (`proposal.md`, `tasks.md`, `design.md`) each get their own tab
+2. Files in subdirectories are grouped by folder name (e.g., `mockups/` becomes "Mockups" tab)
+3. Spec deltas appear in the final "Spec Deltas" tab

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getChange, type Change } from '../lib/api';
+  import { getChange, getChangeFileUrl, type Change, type FileGroup, type ChangeFile } from '../lib/api';
   import { navigateTo, changesRefreshTrigger } from '../stores/index';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
+  import HtmlRenderer from './HtmlRenderer.svelte';
   import TaskProgress from './TaskProgress.svelte';
 
   export let changeName: string;
@@ -10,8 +11,19 @@
   let change: Change | null = null;
   let loading = true;
   let error: string | null = null;
-  let activeTab: 'proposal' | 'tasks' | 'design' | 'deltas' = 'proposal';
   let lastRefreshTrigger = 0;
+
+  // Two-level navigation state
+  let activeGroupIndex = 0;
+  let activeFileIndex = 0;
+
+  // Computed: current group and file
+  $: activeGroup = change?.fileGroups[activeGroupIndex] ?? null;
+  $: activeFile = activeGroup?.files[activeFileIndex] ?? null;
+
+  // Special handling for deltas tab (always last if present)
+  $: showDeltasTab = (change?.specDeltas.length ?? 0) > 0;
+  $: isDeltasActive = activeGroupIndex === (change?.fileGroups.length ?? 0);
 
   onMount(async () => {
     await loadChange();
@@ -29,15 +41,23 @@
     error = null;
     try {
       change = await getChange(changeName);
-      // Set initial tab based on available content
-      if (!change.proposal && change.tasksRaw) {
-        activeTab = 'tasks';
-      }
+      // Reset selection
+      activeGroupIndex = 0;
+      activeFileIndex = 0;
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load change';
     } finally {
       loading = false;
     }
+  }
+
+  function selectGroup(index: number) {
+    activeGroupIndex = index;
+    activeFileIndex = 0;
+  }
+
+  function selectDeltas() {
+    activeGroupIndex = change?.fileGroups.length ?? 0;
   }
 
   $: if (changeName) loadChange();
@@ -83,48 +103,31 @@
       <p class="text-red-300">{error}</p>
     </div>
   {:else if change}
-    <!-- Tabs -->
+    <!-- Primary tabs: Groups + Deltas -->
     <div class="border-b border-gray-700">
       <nav class="flex space-x-4">
-        {#if change.proposal}
+        {#each change.fileGroups as group, i}
           <button
-            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {activeTab === 'proposal'
+            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {activeGroupIndex === i && !isDeltasActive
               ? 'border-blue-500 text-blue-400'
               : 'border-transparent text-gray-400 hover:text-gray-300'}"
-            onclick={() => (activeTab = 'proposal')}
+            onclick={() => selectGroup(i)}
           >
-            Proposal
+            {group.name}
+            {#if group.files.length > 1}
+              <span class="ml-1 px-1.5 py-0.5 text-xs bg-gray-700 rounded-full">
+                {group.files.length}
+              </span>
+            {/if}
           </button>
-        {/if}
-        {#if change.tasksRaw}
+        {/each}
+
+        {#if showDeltasTab}
           <button
-            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {activeTab === 'tasks'
+            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {isDeltasActive
               ? 'border-blue-500 text-blue-400'
               : 'border-transparent text-gray-400 hover:text-gray-300'}"
-            onclick={() => (activeTab = 'tasks')}
-          >
-            Tasks
-            <span class="ml-1 px-1.5 py-0.5 text-xs bg-gray-700 text-gray-300 rounded-full">
-              {change.taskProgress.done}/{change.taskProgress.total}
-            </span>
-          </button>
-        {/if}
-        {#if change.design}
-          <button
-            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {activeTab === 'design'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-300'}"
-            onclick={() => (activeTab = 'design')}
-          >
-            Design
-          </button>
-        {/if}
-        {#if change.specDeltas.length > 0}
-          <button
-            class="px-4 py-2 border-b-2 font-medium text-sm transition-colors {activeTab === 'deltas'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-300'}"
-            onclick={() => (activeTab = 'deltas')}
+            onclick={selectDeltas}
           >
             Spec Deltas
             <span class="ml-1 px-1.5 py-0.5 text-xs bg-gray-700 text-gray-300 rounded-full">
@@ -135,15 +138,29 @@
       </nav>
     </div>
 
-    <!-- Content -->
+    <!-- Secondary tabs: Files within group (if multiple) -->
+    {#if activeGroup && activeGroup.files.length > 1 && !isDeltasActive}
+      <div class="flex space-x-2 px-2">
+        {#each activeGroup.files as file, i}
+          <button
+            class="px-3 py-1.5 text-sm rounded-md transition-colors {activeFileIndex === i
+              ? 'bg-gray-700 text-gray-100'
+              : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'}"
+            onclick={() => (activeFileIndex = i)}
+          >
+            {file.name}
+            {#if file.type === 'html'}
+              <span class="ml-1 text-xs text-orange-400">HTML</span>
+            {/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Content area -->
     <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
-      {#if activeTab === 'proposal' && change.proposal}
-        <MarkdownRenderer content={change.proposal} />
-      {:else if activeTab === 'tasks' && change.tasksRaw}
-        <MarkdownRenderer content={change.tasksRaw} />
-      {:else if activeTab === 'design' && change.design}
-        <MarkdownRenderer content={change.design} />
-      {:else if activeTab === 'deltas'}
+      {#if isDeltasActive}
+        <!-- Spec Deltas -->
         <div class="space-y-8">
           {#each change.specDeltas as delta}
             <div>
@@ -154,6 +171,15 @@
             </div>
           {/each}
         </div>
+      {:else if activeFile}
+        {#if activeFile.type === 'markdown' && activeFile.content}
+          <MarkdownRenderer content={activeFile.content} />
+        {:else if activeFile.type === 'html'}
+          <HtmlRenderer
+            src={getChangeFileUrl(changeName, activeFile.path)}
+            title={activeFile.name}
+          />
+        {/if}
       {/if}
     </div>
   {/if}
