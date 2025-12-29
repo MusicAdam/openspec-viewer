@@ -110,7 +110,14 @@ export async function createServer(options: ServerOptions): Promise<Server> {
   });
 
   // Start server
-  await fastify.listen({ port, host });
+  try {
+    await fastify.listen({ port, host });
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && err.code === 'EADDRINUSE') {
+      throw new Error(`Port ${port} is already in use. Please use a different port with --port <port>`);
+    }
+    throw err;
+  }
   const url = `http://${host}:${port}`;
 
   console.log(`OpenSpec Viewer running at ${url}`);

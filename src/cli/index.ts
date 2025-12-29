@@ -56,12 +56,13 @@ program
 
       console.log(`\nPress Ctrl+C to stop`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('already in use') || (error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
         console.error(`Error: Port ${port} is already in use`);
         console.error(`Try using a different port: openspec-viewer --port 3001`);
         process.exit(1);
       }
-      console.error('Failed to start server:', error);
+      console.error('Failed to start server:', message);
       process.exit(1);
     }
   });
