@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Form Mockup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    .login-header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-form {
+      padding: 40px 30px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #374151;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group input::placeholder {
+      color: #9ca3af;
+    }
+
+    .remember-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .remember-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    .remember-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #667eea;
+    }
+
+    .forgot-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .forgot-link:hover {
+      text-decoration: underline;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 30px 0;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .divider span {
+      padding: 0 16px;
+    }
+
+    .social-login {
+      display: flex;
+      gap: 12px;
+    }
+
+    .social-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .social-btn:hover {
+      border-color: #667eea;
+      background: #f9fafb;
+    }
+
+    .signup-link {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .signup-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .signup-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* State indicators */
+    .state-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 0 30px;
+      padding-top: 20px;
+    }
+
+    .state-tab {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      background: #f3f4f6;
+      color: #6b7280;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .state-tab.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .state-tab:hover:not(.active) {
+      background: #e5e7eb;
+    }
+
+    /* Error state */
+    .error-message {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    .form-group.error input {
+      border-color: #dc2626;
+    }
+
+    /* Success state */
+    .success-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+    }
+
+    .success-overlay.visible {
+      display: flex;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin-bottom: 20px;
+      animation: pop 0.4s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .success-overlay h2 {
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .success-overlay p {
+      color: #6b7280;
+    }
+
+    .login-container {
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="state-tabs">
+      <button class="state-tab active" onclick="showState('default')">Default</button>
+      <button class="state-tab" onclick="showState('error')">Error</button>
+      <button class="state-tab" onclick="showState('success')">Success</button>
+    </div>
+
+    <div class="login-header">
+      <div class="avatar">👤</div>
+      <h1>Welcome Back!</h1>
+      <p>Sign in to continue to your account</p>
+    </div>
+
+    <form class="login-form" onsubmit="handleSubmit(event)">
+      <div class="error-message" id="errorMessage">
+        Invalid email or password. Please try again.
+      </div>
+
+      <div class="form-group" id="emailGroup">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com">
+      </div>
+
+      <div class="form-group" id="passwordGroup">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password">
+      </div>
+
+      <div class="remember-row">
+        <label>
+          <input type="checkbox" checked>
+          Remember me
+        </label>
+        <a href="#" class="forgot-link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="login-btn">Sign In</button>
+
+      <div class="divider">
+        <span>or continue with</span>
+      </div>
+
+      <div class="social-login">
+        <button type="button" class="social-btn">🍎</button>
+        <button type="button" class="social-btn">🔵</button>
+        <button type="button" class="social-btn">🐦</button>
+      </div>
+
+      <div class="signup-link">
+        Don't have an account? <a href="#">Sign up for free</a>
+      </div>
+    </form>
+
+    <div class="success-overlay" id="successOverlay">
+      <div class="success-icon">✓</div>
+      <h2>Login Successful!</h2>
+      <p>Redirecting to dashboard...</p>
+    </div>
+  </div>
+
+  <script>
+    function showState(state) {
+      // Update tab buttons
+      document.querySelectorAll('.state-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // Reset all states
+      document.getElementById('errorMessage').classList.remove('visible');
+      document.getElementById('emailGroup').classList.remove('error');
+      document.getElementById('passwordGroup').classList.remove('error');
+      document.getElementById('successOverlay').classList.remove('visible');
+
+      // Apply selected state
+      if (state === 'error') {
+        document.getElementById('errorMessage').classList.add('visible');
+        document.getElementById('emailGroup').classList.add('error');
+        document.getElementById('passwordGroup').classList.add('error');
+      } else if (state === 'success') {
+        document.getElementById('successOverlay').classList.add('visible');
+      }
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      showState('success');
+      document.querySelectorAll('.state-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.textContent === 'Success') tab.classList.add('active');
+      });
+    }
+  </script>
+</body>
+</html>
