@@ -1,6 +1,16 @@
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { join, basename, resolve, dirname } from 'path';
 import type { Project, ParseResult } from '../shared/types.js';
+
+/**
+ * Convert a folder name to a human-readable project name
+ * e.g., "my-project" -> "My Project", "my_project" -> "My Project"
+ */
+function folderNameToProjectName(folderName: string): string {
+  return folderName
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 /**
  * Parse the project.md file from an OpenSpec directory
@@ -11,12 +21,13 @@ export async function parseProject(openspecPath: string): Promise<ParseResult<Pr
 
   const projectPath = join(openspecPath, 'project.md');
 
+  // Infer project name from parent folder (openspecPath is typically project/openspec/)
+  const projectRoot = dirname(resolve(openspecPath));
+  const folderName = basename(projectRoot);
+  const name = folderNameToProjectName(folderName);
+
   try {
     const content = await readFile(projectPath, 'utf-8');
-
-    // Extract project name from first heading
-    const nameMatch = content.match(/^#\s+(.+)$/m);
-    const name = nameMatch ? nameMatch[1].trim() : 'Unknown Project';
 
     // Extract description from first paragraph after heading
     const descMatch = content.match(/^#\s+.+\n+(.+?)(?:\n\n|\n#|$)/s);
@@ -37,7 +48,7 @@ export async function parseProject(openspecPath: string): Promise<ParseResult<Pr
       warnings.push('project.md not found');
       return {
         data: {
-          name: 'OpenSpec Project',
+          name,
           description: 'No project.md file found',
           path: projectPath,
           content: '',
