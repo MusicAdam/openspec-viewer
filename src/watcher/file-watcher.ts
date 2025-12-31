@@ -4,7 +4,7 @@ import { relative, sep } from 'path';
 export type FileChangeHandler = (event: FileChangeEvent) => void;
 
 export interface FileChangeEvent {
-  type: 'add' | 'change' | 'unlink';
+  type: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir';
   path: string;
   affectedEntity: 'project' | 'specs' | 'changes';
   entityId?: string;
@@ -30,7 +30,7 @@ export function createFileWatcher(
     },
   });
 
-  const handleEvent = (eventType: 'add' | 'change' | 'unlink') => (filePath: string) => {
+  const handleFileEvent = (eventType: 'add' | 'change' | 'unlink') => (filePath: string) => {
     // Only watch .md and .html files
     if (!filePath.endsWith('.md') && !filePath.endsWith('.html')) {
       return;
@@ -67,10 +67,42 @@ export function createFileWatcher(
     });
   };
 
+  const handleDirEvent = (eventType: 'addDir' | 'unlinkDir') => (dirPath: string) => {
+    const relativePath = relative(openspecPath, dirPath);
+    const parts = relativePath.split(sep);
+
+    // Only trigger for directories under specs/ or changes/
+    if (parts[0] !== 'specs' && parts[0] !== 'changes') {
+      return;
+    }
+
+    let affectedEntity: 'specs' | 'changes' = parts[0] as 'specs' | 'changes';
+    let entityId: string | undefined;
+
+    if (parts[0] === 'specs' && parts[1]) {
+      entityId = parts[1];
+    } else if (parts[0] === 'changes') {
+      if (parts[1] === 'archive' && parts[2]) {
+        entityId = parts[2];
+      } else if (parts[1] && parts[1] !== 'archive') {
+        entityId = parts[1];
+      }
+    }
+
+    onChange({
+      type: eventType,
+      path: dirPath,
+      affectedEntity,
+      entityId,
+    });
+  };
+
   watcher
-    .on('add', handleEvent('add'))
-    .on('change', handleEvent('change'))
-    .on('unlink', handleEvent('unlink'));
+    .on('add', handleFileEvent('add'))
+    .on('change', handleFileEvent('change'))
+    .on('unlink', handleFileEvent('unlink'))
+    .on('addDir', handleDirEvent('addDir'))
+    .on('unlinkDir', handleDirEvent('unlinkDir'));
 
   return watcher;
 }

@@ -30,20 +30,39 @@
     lastRefreshTrigger = $changesRefreshTrigger;
   });
 
-  // React to WebSocket refresh signals
+  // React to WebSocket refresh signals - preserve navigation state on hot reload
   $: if ($changesRefreshTrigger > lastRefreshTrigger) {
     lastRefreshTrigger = $changesRefreshTrigger;
-    loadChange();
+    loadChange(true);
   }
 
-  async function loadChange() {
-    loading = true;
+  async function loadChange(preserveState = false) {
+    // Only show loading state on initial load, not hot reload
+    if (!preserveState) {
+      loading = true;
+    }
     error = null;
+
+    // Save current navigation state for hot reload
+    const savedGroupIndex = activeGroupIndex;
+    const savedFileIndex = activeFileIndex;
+
     try {
       change = await getChange(changeName);
-      // Reset selection
-      activeGroupIndex = 0;
-      activeFileIndex = 0;
+
+      if (preserveState && change) {
+        // Restore navigation state, validating indices are still valid
+        const maxGroupIndex = change.fileGroups.length + (change.specDeltas.length > 0 ? 1 : 0) - 1;
+        activeGroupIndex = Math.min(savedGroupIndex, maxGroupIndex);
+
+        const currentGroup = change.fileGroups[activeGroupIndex];
+        const maxFileIndex = currentGroup ? currentGroup.files.length - 1 : 0;
+        activeFileIndex = Math.min(savedFileIndex, Math.max(0, maxFileIndex));
+      } else {
+        // Reset selection on initial load or navigation
+        activeGroupIndex = 0;
+        activeFileIndex = 0;
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load change';
     } finally {

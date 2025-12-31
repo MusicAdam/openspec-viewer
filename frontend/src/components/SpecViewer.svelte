@@ -17,14 +17,17 @@
     lastRefreshTrigger = $specsRefreshTrigger;
   });
 
-  // React to WebSocket refresh signals
+  // React to WebSocket refresh signals - preserve state on hot reload
   $: if ($specsRefreshTrigger > lastRefreshTrigger) {
     lastRefreshTrigger = $specsRefreshTrigger;
-    loadSpec();
+    loadSpec(true);
   }
 
-  async function loadSpec() {
-    loading = true;
+  async function loadSpec(preserveState = false) {
+    // Only show loading state on initial load, not hot reload
+    if (!preserveState) {
+      loading = true;
+    }
     error = null;
     try {
       spec = await getSpec(specName);
