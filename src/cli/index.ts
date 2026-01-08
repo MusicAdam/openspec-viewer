@@ -47,6 +47,9 @@ program
       // Handle shutdown
       const shutdown = async () => {
         console.log('\nShutting down...');
+        if (process.stdin.isTTY) {
+          process.stdin.setRawMode(false);
+        }
         await server.close();
         process.exit(0);
       };
@@ -54,7 +57,26 @@ program
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
 
-      console.log(`\nPress Ctrl+C to stop`);
+      // Enable keyboard shortcuts
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.setEncoding('utf8');
+
+        process.stdin.on('data', async (key: string) => {
+          // Ctrl+C in raw mode
+          if (key === '\u0003') {
+            await shutdown();
+            return;
+          }
+          // 'l' or 'L' to open browser
+          if (key.toLowerCase() === 'l') {
+            await open(server.url);
+          }
+        });
+      }
+
+      console.log(`\nPress 'l' to open browser, Ctrl+C to stop`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('already in use') || (error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
