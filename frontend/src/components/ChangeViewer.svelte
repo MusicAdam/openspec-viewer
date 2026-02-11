@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getChange, getChangeFileUrl, type Change, type FileGroup, type ChangeFile } from '../lib/api';
-  import { navigateTo, changesRefreshTrigger } from '../stores/index';
+  import { navigateTo, changesRefreshTrigger, addToast } from '../stores/index';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import HtmlRenderer from './HtmlRenderer.svelte';
   import TaskProgress from './TaskProgress.svelte';
@@ -80,6 +80,19 @@
   }
 
   $: if (changeName) loadChange();
+
+  // Compute next task number
+  $: nextTaskNum = (change?.taskProgress.done ?? 0) + 1;
+  $: applyCommand = `/openspec:apply ${changeName} task ${nextTaskNum}`;
+
+  async function copyApplyCommand() {
+    try {
+      await navigator.clipboard.writeText(applyCommand);
+      addToast('Copied to clipboard!', 'success');
+    } catch {
+      addToast('Failed to copy', 'error');
+    }
+  }
 </script>
 
 <div class="space-y-6">
@@ -201,5 +214,19 @@
         {/if}
       {/if}
     </div>
+
+    <!-- Floating apply command bubble -->
+    {#if !change.isArchived && change.taskProgress.done < change.taskProgress.total}
+      <button
+        onclick={copyApplyCommand}
+        class="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105 flex items-center gap-2 z-50"
+        title={applyCommand}
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+        </svg>
+        <span class="text-sm font-medium">Task {nextTaskNum}</span>
+      </button>
+    {/if}
   {/if}
 </div>
