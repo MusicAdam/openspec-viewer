@@ -14,6 +14,54 @@ export function renderMarkdown(content: string): string {
 }
 
 /**
+ * Block elements that can be selected for suggestions
+ */
+const SELECTABLE_BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'pre'];
+
+/**
+ * Render markdown with selectable blocks wrapped in divs with unique IDs
+ * Used when suggestion mode is enabled
+ */
+export function renderMarkdownWithBlocks(content: string): string {
+  const html = renderMarkdown(content);
+
+  // Parse HTML and wrap block elements
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  let blockCounter = 0;
+
+  function wrapBlocks(element: Element) {
+    // Process children first (depth-first)
+    const children = Array.from(element.children);
+    for (const child of children) {
+      wrapBlocks(child);
+    }
+
+    // Check if this element should be wrapped
+    const tagName = element.tagName.toLowerCase();
+    if (SELECTABLE_BLOCK_TAGS.includes(tagName)) {
+      // Create wrapper div
+      const wrapper = doc.createElement('div');
+      wrapper.className = 'suggestion-block';
+      wrapper.setAttribute('data-block-id', `block-${blockCounter++}`);
+
+      // Store the text content for later use
+      const textContent = element.textContent?.trim() || '';
+      wrapper.setAttribute('data-block-text', textContent);
+
+      // Replace element with wrapper containing element
+      element.parentNode?.insertBefore(wrapper, element);
+      wrapper.appendChild(element);
+    }
+  }
+
+  wrapBlocks(doc.body);
+
+  return doc.body.innerHTML;
+}
+
+/**
  * Highlight delta operations in markdown content
  * Wraps ADDED/MODIFIED/REMOVED sections with appropriate CSS classes
  */
