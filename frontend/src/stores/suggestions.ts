@@ -15,6 +15,29 @@ export interface SuggestionState {
   popoverPosition: { x: number; y: number } | null;
 }
 
+const STORAGE_KEY_PREFIX = 'openspec-suggestions-';
+
+function loadSuggestions(changeName: string): Suggestion[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_PREFIX + changeName);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSuggestions(changeName: string, suggestions: Suggestion[]) {
+  try {
+    if (suggestions.length === 0) {
+      localStorage.removeItem(STORAGE_KEY_PREFIX + changeName);
+    } else {
+      localStorage.setItem(STORAGE_KEY_PREFIX + changeName, JSON.stringify(suggestions));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 function createSuggestionStore() {
   const { subscribe, set, update } = writable<SuggestionState>({
     isActive: false,
@@ -28,17 +51,23 @@ function createSuggestionStore() {
     subscribe,
 
     enterSuggestionMode(changeName: string) {
+      const savedSuggestions = loadSuggestions(changeName);
       update((state) => ({
         ...state,
         isActive: true,
         currentChange: changeName,
-        suggestions: [],
+        suggestions: savedSuggestions,
         selectedBlockId: null,
         popoverPosition: null,
       }));
     },
 
     exitSuggestionMode() {
+      // Save before exiting
+      const state = get({ subscribe });
+      if (state.currentChange) {
+        saveSuggestions(state.currentChange, state.suggestions);
+      }
       set({
         isActive: false,
         currentChange: '',
@@ -66,31 +95,73 @@ function createSuggestionStore() {
 
     addSuggestion(blockId: string, originalText: string, suggestedChange: string) {
       const id = crypto.randomUUID();
-      update((state) => ({
-        ...state,
-        suggestions: [
+      update((state) => {
+        const newSuggestions = [
           ...state.suggestions,
           { id, blockId, originalText, suggestedChange },
-        ],
-        selectedBlockId: null,
-        popoverPosition: null,
-      }));
+        ];
+        saveSuggestions(state.currentChange, newSuggestions);
+        return {
+          ...state,
+          suggestions: newSuggestions,
+          selectedBlockId: null,
+          popoverPosition: null,
+        };
+      });
     },
 
     updateSuggestion(id: string, suggestedChange: string) {
-      update((state) => ({
-        ...state,
-        suggestions: state.suggestions.map((s) =>
+      update((state) => {
+        const newSuggestions = state.suggestions.map((s) =>
           s.id === id ? { ...s, suggestedChange } : s
-        ),
-      }));
+        );
+        saveSuggestions(state.currentChange, newSuggestions);
+        return {
+          ...state,
+          suggestions: newSuggestions,
+        };
+      });
     },
 
     removeSuggestion(id: string) {
-      update((state) => ({
-        ...state,
-        suggestions: state.suggestions.filter((s) => s.id !== id),
-      }));
+      update((state) => {
+        const newSuggestions = state.suggestions.filter((s) => s.id !== id);
+        saveSuggestions(state.currentChange, newSuggestions);
+        return {
+          ...state,
+          suggestions: newSuggestions,
+        };
+      });
+    },
+
+    clearAllSuggestions() {
+      update((state) => {
+        saveSuggestions(state.currentChange, []);
+        return {
+          ...state,
+          suggestions: [],
+        };
+      });
+    },
+
+    reconcileSuggestions(newContent: string): number {
+      let resolvedCount = 0;
+      update((state) => {
+        const remaining = state.suggestions.filter((s) => {
+          const stillExists = newContent.includes(s.originalText);
+          if (!stillExists) {
+            resolvedCount++;
+          }
+          return stillExists;
+        });
+
+        if (resolvedCount > 0) {
+          saveSuggestions(state.currentChange, remaining);
+        }
+
+        return { ...state, suggestions: remaining };
+      });
+      return resolvedCount;
     },
 
     getSuggestionForBlock(blockId: string): Suggestion | undefined {

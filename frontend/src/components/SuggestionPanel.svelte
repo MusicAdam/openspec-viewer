@@ -12,9 +12,6 @@
 
   $: suggestions = $suggestionStore.suggestions;
 
-  // Compute proposal content from change object
-  $: proposalContent = change?.fileGroups?.find((g) => g.name === 'Proposal')?.files[0]?.content ?? '';
-
   function truncateText(text: string, maxLength: number = 60): string {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
@@ -39,7 +36,8 @@
   }
 
   function handleGeneratePrompt() {
-    generatedPrompt = generatePrompt(changeName, proposalContent, suggestions);
+    if (!change) return;
+    generatedPrompt = generatePrompt(changeName, change, suggestions);
     showPromptModal = true;
   }
 

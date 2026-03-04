@@ -61,6 +61,11 @@
         const currentGroup = change.fileGroups[activeGroupIndex];
         const maxFileIndex = currentGroup ? currentGroup.files.length - 1 : 0;
         activeFileIndex = Math.min(savedFileIndex, Math.max(0, maxFileIndex));
+
+        // Reconcile suggestions on hot-reload if suggestion mode is active
+        if ($suggestionStore.isActive) {
+          reconcileSuggestionsWithContent(change);
+        }
       } else {
         // Reset selection on initial load or navigation
         activeGroupIndex = 0;
@@ -70,6 +75,35 @@
       error = e instanceof Error ? e.message : 'Failed to load change';
     } finally {
       loading = false;
+    }
+  }
+
+  function reconcileSuggestionsWithContent(changeData: Change) {
+    // Gather all markdown content from the change
+    const contentParts: string[] = [];
+
+    // Add content from all markdown files in all groups
+    for (const group of changeData.fileGroups) {
+      for (const file of group.files) {
+        if (file.type === 'markdown' && file.content) {
+          contentParts.push(file.content);
+        }
+      }
+    }
+
+    // Add content from spec deltas
+    for (const delta of changeData.specDeltas) {
+      contentParts.push(delta.content);
+    }
+
+    const combinedContent = contentParts.join('\n');
+    const resolvedCount = suggestionStore.reconcileSuggestions(combinedContent);
+
+    if (resolvedCount > 0) {
+      const message = resolvedCount === 1
+        ? '1 suggestion resolved'
+        : `${resolvedCount} suggestions resolved`;
+      addToast(message, 'success');
     }
   }
 
@@ -241,7 +275,7 @@
               <h3 class="text-lg font-semibold text-gray-100 mb-4 flex items-center gap-2">
                 <span class="px-2 py-1 text-sm bg-green-900 text-green-300 rounded">{delta.capability}</span>
               </h3>
-              <MarkdownRenderer content={delta.content} highlightDiff={true} />
+              <MarkdownRenderer content={delta.content} highlightDiff={true} suggestionModeEnabled={suggestionModeActive} />
             </div>
           {/each}
         </div>
@@ -249,7 +283,7 @@
         {#if activeFile.type === 'markdown' && activeFile.content}
           <MarkdownRenderer
             content={activeFile.content}
-            suggestionModeEnabled={suggestionModeActive && activeGroup?.name === 'Proposal'}
+            suggestionModeEnabled={suggestionModeActive}
           />
         {:else if activeFile.type === 'html'}
           <HtmlRenderer
