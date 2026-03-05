@@ -151,3 +151,28 @@
 .diff-removed {
   @apply bg-red-900/40 border-l-4 border-red-500 pl-3 rounded-r;
 }
+
+/* Suggestion mode styles */
+.suggestion-mode .suggestion-block {
+  @apply cursor-pointer rounded transition-all duration-150;
+}
+
+.suggestion-mode .suggestion-block:hover {
+  @apply bg-blue-900/30;
+}
+
+.suggestion-mode .suggestion-block.selected {
+  @apply ring-2 ring-blue-500 bg-blue-900/40;
+}
+
+.suggestion-mode .suggestion-block.has-suggestion {
+  @apply border-l-4 border-yellow-500 pl-3 bg-yellow-900/20;
+}
+
+.suggestion-mode .suggestion-block.has-suggestion:hover {
+  @apply bg-yellow-900/30;
+}
+
+.suggestion-mode .suggestion-block.has-suggestion.selected {
+  @apply ring-2 ring-yellow-500 bg-yellow-900/40;
+}

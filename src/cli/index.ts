@@ -11,7 +11,7 @@ program
   .name('openspec-viewer')
   .description('Interactive browser viewer for OpenSpec directories')
   .version('0.1.0')
-  .argument('[path]', 'Path to OpenSpec directory', '.')
+  .argument('[path]', 'Path to OpenSpec directory', 'openspec')
   .option('-p, --port <number>', 'Port to run server on', '3000')
   .option('--no-open', 'Do not open browser automatically')
   .action(async (path: string, options: { port: string; open: boolean }) => {

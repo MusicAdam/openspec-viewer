@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { getChange, getChangeFileUrl, type Change, type FileGroup, type ChangeFile } from '../lib/api';
   import { navigateTo, changesRefreshTrigger, addToast } from '../stores/index';
+  import { suggestionStore } from '../stores/suggestions';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import HtmlRenderer from './HtmlRenderer.svelte';
   import TaskProgress from './TaskProgress.svelte';
+  import SuggestionPanel from './SuggestionPanel.svelte';
+  import SuggestionPopover from './SuggestionPopover.svelte';
 
   export let changeName: string;
 
@@ -58,6 +61,11 @@
         const currentGroup = change.fileGroups[activeGroupIndex];
         const maxFileIndex = currentGroup ? currentGroup.files.length - 1 : 0;
         activeFileIndex = Math.min(savedFileIndex, Math.max(0, maxFileIndex));
+
+        // Reconcile suggestions on hot-reload if suggestion mode is active
+        if ($suggestionStore.isActive) {
+          reconcileSuggestionsWithContent(change);
+        }
       } else {
         // Reset selection on initial load or navigation
         activeGroupIndex = 0;
@@ -67,6 +75,35 @@
       error = e instanceof Error ? e.message : 'Failed to load change';
     } finally {
       loading = false;
+    }
+  }
+
+  function reconcileSuggestionsWithContent(changeData: Change) {
+    // Gather all markdown content from the change
+    const contentParts: string[] = [];
+
+    // Add content from all markdown files in all groups
+    for (const group of changeData.fileGroups) {
+      for (const file of group.files) {
+        if (file.type === 'markdown' && file.content) {
+          contentParts.push(file.content);
+        }
+      }
+    }
+
+    // Add content from spec deltas
+    for (const delta of changeData.specDeltas) {
+      contentParts.push(delta.content);
+    }
+
+    const combinedContent = contentParts.join('\n');
+    const resolvedCount = suggestionStore.reconcileSuggestions(combinedContent);
+
+    if (resolvedCount > 0) {
+      const message = resolvedCount === 1
+        ? '1 suggestion resolved'
+        : `${resolvedCount} suggestions resolved`;
+      addToast(message, 'success');
     }
   }
 
@@ -98,6 +135,24 @@
     return findFirstIncomplete(change.tasks) ?? String((change.taskProgress.done ?? 0) + 1);
   })();
   $: applyCommand = `/openspec:apply ${changeName} task ${nextTaskLabel}`;
+
+  // Suggestion mode state
+  $: suggestionModeActive = $suggestionStore.isActive;
+
+  function toggleSuggestionMode() {
+    if (suggestionModeActive) {
+      suggestionStore.exitSuggestionMode();
+    } else {
+      suggestionStore.enterSuggestionMode(changeName);
+    }
+  }
+
+  // Exit suggestion mode when navigating away
+  onDestroy(() => {
+    if ($suggestionStore.isActive) {
+      suggestionStore.exitSuggestionMode();
+    }
+  });
 
   async function copyApplyCommand() {
     try {
@@ -138,6 +193,24 @@
         </div>
       {/if}
     </div>
+    <!-- Suggest Changes button -->
+    {#if !change?.isArchived}
+      <button
+        onclick={toggleSuggestionMode}
+        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors
+               {suggestionModeActive
+                 ? 'bg-blue-600 text-white'
+                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        <span class="text-sm font-medium">
+          {suggestionModeActive ? 'Exit Suggestions' : 'Suggest Changes'}
+        </span>
+      </button>
+    {/if}
   </div>
 
   {#if loading}
@@ -204,7 +277,10 @@
     {/if}
 
     <!-- Content area -->
-    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+    <div
+      class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 transition-all duration-300"
+      class:mr-96={suggestionModeActive}
+    >
       {#if isDeltasActive}
         <!-- Spec Deltas -->
         <div class="space-y-8">
@@ -213,13 +289,16 @@
               <h3 class="text-lg font-semibold text-gray-100 mb-4 flex items-center gap-2">
                 <span class="px-2 py-1 text-sm bg-green-900 text-green-300 rounded">{delta.capability}</span>
               </h3>
-              <MarkdownRenderer content={delta.content} highlightDiff={true} />
+              <MarkdownRenderer content={delta.content} highlightDiff={true} suggestionModeEnabled={suggestionModeActive} />
             </div>
           {/each}
         </div>
       {:else if activeFile}
         {#if activeFile.type === 'markdown' && activeFile.content}
-          <MarkdownRenderer content={activeFile.content} />
+          <MarkdownRenderer
+            content={activeFile.content}
+            suggestionModeEnabled={suggestionModeActive}
+          />
         {:else if activeFile.type === 'html'}
           <HtmlRenderer
             src={getChangeFileUrl(changeName, activeFile.path)}
@@ -230,7 +309,7 @@
     </div>
 
     <!-- Floating apply command bubble -->
-    {#if !change.isArchived && change.taskProgress.done < change.taskProgress.total}
+    {#if !change.isArchived && change.taskProgress.done < change.taskProgress.total && !suggestionModeActive}
       <button
         onclick={copyApplyCommand}
         class="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105 flex items-center gap-2 z-50"
@@ -241,6 +320,12 @@
         </svg>
         <span class="text-sm font-medium">Task {nextTaskLabel}</span>
       </button>
+    {/if}
+
+    <!-- Suggestion Mode Components -->
+    {#if suggestionModeActive}
+      <SuggestionPanel {changeName} {change} />
+      <SuggestionPopover />
     {/if}
   {/if}
 </div>
