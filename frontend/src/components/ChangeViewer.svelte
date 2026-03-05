@@ -81,9 +81,23 @@
 
   $: if (changeName) loadChange();
 
-  // Compute next task number
-  $: nextTaskNum = (change?.taskProgress.done ?? 0) + 1;
-  $: applyCommand = `/openspec:apply ${changeName} task ${nextTaskNum}`;
+  // Find the first incomplete task and extract its section number from the text
+  $: nextTaskLabel = (() => {
+    if (!change?.tasks) return String((change?.taskProgress.done ?? 0) + 1);
+    function findFirstIncomplete(tasks: import('../lib/api').Task[]): string | null {
+      for (const task of tasks) {
+        if (!task.completed) {
+          const match = task.text.match(/^\*?\*?(\d+)/);
+          return match ? match[1] : null;
+        }
+        const found = findFirstIncomplete(task.subtasks);
+        if (found) return found;
+      }
+      return null;
+    }
+    return findFirstIncomplete(change.tasks) ?? String((change.taskProgress.done ?? 0) + 1);
+  })();
+  $: applyCommand = `/openspec:apply ${changeName} task ${nextTaskLabel}`;
 
   async function copyApplyCommand() {
     try {
@@ -225,7 +239,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
         </svg>
-        <span class="text-sm font-medium">Task {nextTaskNum}</span>
+        <span class="text-sm font-medium">Task {nextTaskLabel}</span>
       </button>
     {/if}
   {/if}
