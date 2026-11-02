@@ -1,3 +1,5 @@
+import { withProject } from './projectContext';
+
 export type MessageHandler = (message: WSMessage) => void;
 
 export interface WSMessage {
@@ -73,5 +75,5 @@ export class WebSocketClient {
 }
 
 // Create singleton instance
-const wsUrl = `ws://${window.location.host}/ws`;
+const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${withProject('/ws')}`;
 export const wsClient = new WebSocketClient(wsUrl);

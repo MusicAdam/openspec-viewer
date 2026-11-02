@@ -1,4 +1,33 @@
+import { withProject } from './projectContext';
+
 const API_BASE = '/api';
+
+export interface ProjectOverview {
+  root: string;
+  defaultRoot: string;
+  projects: { id: string; name: string; path: string; relativePath: string }[];
+  warnings: string[];
+  scannedAt: string;
+}
+
+export async function getProjects(forceRefresh = false): Promise<ProjectOverview> {
+  const response = await fetch(`/api/projects${forceRefresh ? '?refresh=true' : ''}`);
+  if (!response.ok) throw new Error(`Failed to discover projects: ${response.status}`);
+  return response.json();
+}
+
+export async function setWorkspaceRoot(root?: string): Promise<ProjectOverview> {
+  const response = await fetch('/api/workspace', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root }),
+  });
+  if (!response.ok) {
+    const problem: { message?: string; error?: string } = await response.json();
+    throw new Error(problem.message || problem.error || `Failed to change workspace: ${response.status}`);
+  }
+  return response.json();
+}
 
 export interface Project {
   name: string;
@@ -106,7 +135,7 @@ export interface SearchResult {
 }
 
 async function fetchApi<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+  const response = await fetch(withProject(`${API_BASE}${path}`));
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
   }
@@ -148,5 +177,5 @@ export async function search(query: string): Promise<SearchResult[]> {
 }
 
 export function getChangeFileUrl(changeName: string, filePath: string): string {
-  return `${API_BASE}/changes/${encodeURIComponent(changeName)}/files/${filePath}`;
+  return withProject(`${API_BASE}/changes/${encodeURIComponent(changeName)}/files/${filePath.split('/').map(encodeURIComponent).join('/')}`);
 }

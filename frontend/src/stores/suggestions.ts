@@ -1,4 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
+import { suggestionStorageKey } from '../lib/projectContext';
 
 export interface Suggestion {
   id: string;
@@ -15,11 +16,9 @@ export interface SuggestionState {
   popoverPosition: { x: number; y: number } | null;
 }
 
-const STORAGE_KEY_PREFIX = 'openspec-suggestions-';
-
 function loadSuggestions(changeName: string): Suggestion[] {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_PREFIX + changeName);
+    const stored = localStorage.getItem(suggestionStorageKey(changeName));
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -29,9 +28,9 @@ function loadSuggestions(changeName: string): Suggestion[] {
 function saveSuggestions(changeName: string, suggestions: Suggestion[]) {
   try {
     if (suggestions.length === 0) {
-      localStorage.removeItem(STORAGE_KEY_PREFIX + changeName);
+      localStorage.removeItem(suggestionStorageKey(changeName));
     } else {
-      localStorage.setItem(STORAGE_KEY_PREFIX + changeName, JSON.stringify(suggestions));
+      localStorage.setItem(suggestionStorageKey(changeName), JSON.stringify(suggestions));
     }
   } catch {
     // Ignore storage errors

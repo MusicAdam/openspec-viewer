@@ -73,4 +73,9 @@ export class WebSocketManager {
   get clientCount(): number {
     return this.clients.size;
   }
+
+  close() {
+    for (const client of this.clients) client.terminate();
+    this.clients.clear();
+  }
 }
