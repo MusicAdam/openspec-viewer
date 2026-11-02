@@ -10,6 +10,23 @@ npm install -g openspec-viewer
 
 Requires Node.js >= 20.0.0
 
+### Dependency maintenance
+
+The dependency refresh updates packages and the lockfile within the existing
+direct-dependency major versions. It preserves the declared Node.js requirement
+and does not bundle a framework, styling-system, or TypeScript major migration.
+Install reproducibly with `npm ci`; validate with `npm run build` and
+`npm run typecheck`.
+
+The npm audit check on 2026-11-02 decreased from 25 findings (including 2 critical
+and 15 high) to 6: no critical, 1 high, 2 moderate, and 3 low. This is not a
+clean-audit claim or a determination of application exploitability.
+`@fastify/static` and its `glob`/`minimatch` chain still have advisories whose
+suggested fix crosses a direct-dependency major version.
+The Svelte Vite plugin/inspector and `deepmerge` chain still has low-severity
+findings for which npm reports no available fix. These require separately
+reviewed follow-up work rather than a forced upgrade or an unverified override.
+
 ## Usage
 
 ```bash
