@@ -2,6 +2,20 @@
 
 Interactive browser viewer for OpenSpec directories.
 
+## Contributing with coding assistants
+
+[.github/copilot-instructions.md](.github/copilot-instructions.md) provides
+repository instructions discoverable by GitHub Copilot.
+[CLAUDE.md](CLAUDE.md) remains in place for Claude users and shared project
+architecture and OpenSpec-format guidance.
+
+Both entry points describe the same contributor workflow. Adding Copilot support
+does not replace Claude support, change the viewer at runtime, or require either
+assistant. These files guide contributors; the viewer's project context still
+comes from `project.md`, not `CLAUDE.md` or Copilot instructions. This
+documentation-only feature can be reviewed independently of project discovery
+and prompt labels.
+
 ## Installation
 
 ```bash
