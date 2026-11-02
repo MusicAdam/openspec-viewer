@@ -10,6 +10,34 @@ npm install -g openspec-viewer
 
 Requires Node.js >= 20.0.0
 
+### Dependency maintenance
+
+The dependency refresh updates packages and the lockfile while preserving the
+declared Node.js requirement. It does not bundle unrelated framework, styling,
+or TypeScript major migrations. Install reproducibly with `npm ci`; validate
+with `npm run build`, `npm run typecheck`, and `npm test`.
+
+Compatible updates initially reduced npm audit findings from 25 to 6. Because
+upgrading the affected plugins still retained vulnerable transitive dependencies,
+the remaining chains are addressed explicitly:
+
+- Static assets use a small Fastify plugin built on `@fastify/send`, the sender
+  already used by the old static plugin. It preserves GET/HEAD, conditional and
+  range requests, and the SPA fallback without depending on `@fastify/static`,
+  `glob`, or `minimatch`. It rejects traversal, alternate separators, dotfiles,
+  and links outside the frontend root; rejected paths do not use the SPA fallback.
+- Svelte configuration merging uses a checked-in, MIT-licensed compatibility
+  fork with the concrete upstream prototype-poisoning patch. This is a distinctly
+  named local package, not a fictional patched upstream release. Its npm override
+  is backed by security and API-compatibility regressions, not an audit exclusion.
+  See [the fork's provenance and maintenance guide](vendor/deepmerge/README.md).
+
+The npm audit check on 2026-11-02 reports **zero findings** after these changes.
+This is not a claim that the entire application has no vulnerabilities: npm does
+not audit unpublished local code. The fork's patch and the static-serving
+boundaries therefore have explicit regression tests. The project owns the local
+fork until a verified upstream fix can replace it.
+
 ## Usage
 
 ```bash
