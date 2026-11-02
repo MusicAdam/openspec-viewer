@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { readFile } from 'fs/promises';
 import type { OpenSpecData } from '../../parser/index.js';
 import { parseSpec, parseChangeByName, searchOpenSpec } from '../../parser/index.js';
@@ -8,12 +8,12 @@ import { parseSpec, parseChangeByName, searchOpenSpec } from '../../parser/index
  */
 export async function registerApiRoutes(
   fastify: FastifyInstance,
-  getData: () => OpenSpecData | null,
-  getOpenSpecPath: () => string
+  getData: (request: FastifyRequest) => OpenSpecData | null,
+  getOpenSpecPath: (request: FastifyRequest) => string
 ) {
   // Get project info
   fastify.get('/api/project', async (request, reply) => {
-    const data = getData();
+    const data = getData(request);
     if (!data) {
       return reply.status(503).send({ error: 'Data not loaded' });
     }
@@ -22,7 +22,7 @@ export async function registerApiRoutes(
 
   // Get all specs
   fastify.get('/api/specs', async (request, reply) => {
-    const data = getData();
+    const data = getData(request);
     if (!data) {
       return reply.status(503).send({ error: 'Data not loaded' });
     }
@@ -38,7 +38,7 @@ export async function registerApiRoutes(
   // Get single spec
   fastify.get<{ Params: { name: string } }>('/api/specs/:name', async (request, reply) => {
     const { name } = request.params;
-    const result = await parseSpec(getOpenSpecPath(), name);
+    const result = await parseSpec(getOpenSpecPath(request), name);
 
     if (!result.data) {
       return reply.status(404).send({ error: result.errors[0] || 'Spec not found' });
@@ -49,7 +49,7 @@ export async function registerApiRoutes(
 
   // Get all changes
   fastify.get('/api/changes', async (request, reply) => {
-    const data = getData();
+    const data = getData(request);
     if (!data) {
       return reply.status(503).send({ error: 'Data not loaded' });
     }
@@ -62,7 +62,7 @@ export async function registerApiRoutes(
   // Get single change
   fastify.get<{ Params: { name: string } }>('/api/changes/:name', async (request, reply) => {
     const { name } = request.params;
-    const result = await parseChangeByName(getOpenSpecPath(), name);
+    const result = await parseChangeByName(getOpenSpecPath(request), name);
 
     if (!result.data) {
       return reply.status(404).send({ error: result.errors[0] || 'Change not found' });
@@ -83,7 +83,7 @@ export async function registerApiRoutes(
         return reply.status(400).send({ error: 'Invalid file path' });
       }
 
-      const result = await parseChangeByName(getOpenSpecPath(), name);
+      const result = await parseChangeByName(getOpenSpecPath(request), name);
       if (!result.data) {
         return reply.status(404).send({ error: 'Change not found' });
       }
@@ -111,7 +111,7 @@ export async function registerApiRoutes(
 
   // Get stats
   fastify.get('/api/stats', async (request, reply) => {
-    const data = getData();
+    const data = getData(request);
     if (!data) {
       return reply.status(503).send({ error: 'Data not loaded' });
     }
@@ -126,7 +126,7 @@ export async function registerApiRoutes(
       return { results: [] };
     }
 
-    const data = getData();
+    const data = getData(request);
     if (!data) {
       return reply.status(503).send({ error: 'Data not loaded' });
     }

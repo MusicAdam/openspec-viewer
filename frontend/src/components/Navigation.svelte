@@ -39,7 +39,7 @@
 
   function isActive(path: string): boolean {
     if (path === '/') {
-      return $currentRoute === '/' || $currentRoute === '';
+      return $currentRoute === '/' || $currentRoute === '' || $currentRoute === '/dashboard';
     }
     return $currentRoute.startsWith(path);
   }
@@ -47,7 +47,7 @@
 
 <nav class="bg-gray-800 shadow-lg border-b border-gray-700">
   <div class="max-w-7xl mx-auto px-4">
-    <div class="flex justify-between h-16">
+    <div class="flex justify-between gap-4 h-16">
       <div class="flex items-center space-x-8">
         <!-- Logo/Title -->
         <button
@@ -89,7 +89,7 @@
       </div>
 
       <!-- Search -->
-      <div class="flex items-center relative">
+      <div class="flex items-center relative ml-auto">
         <input
           type="text"
           placeholder="Search..."
@@ -125,6 +125,12 @@
           </div>
         {/if}
       </div>
+      <a
+        href="/overview.html"
+        class="self-center shrink-0 px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700"
+      >
+        Overview
+      </a>
     </div>
   </div>
 </nav>

@@ -17,10 +17,15 @@
   import ChangesList from './components/ChangesList.svelte';
   import ChangeViewer from './components/ChangeViewer.svelte';
   import Toast from './components/Toast.svelte';
+  import ProjectOverview from './components/ProjectOverview.svelte';
+
+  const isOverview = window.location.pathname === '/overview.html' ||
+    !new URLSearchParams(window.location.search).has('project');
 
   onMount(() => {
     // Set initial route from URL
     currentRoute.set(window.location.pathname);
+    if (isOverview) return;
 
     // Initialize data and WebSocket
     initializeData();
@@ -55,10 +60,14 @@
 </script>
 
 <div class="min-h-screen bg-gray-900">
-  <Navigation projectName={$project?.name || 'OpenSpec Viewer'} />
+  {#if !isOverview}
+    <Navigation projectName={$project?.name || 'OpenSpec Viewer'} />
+  {/if}
 
   <main class="max-w-7xl mx-auto px-4 py-6">
-    {#if $isLoading}
+    {#if isOverview}
+      <ProjectOverview />
+    {:else if $isLoading}
       <div class="flex items-center justify-center h-64">
         <div class="text-gray-400">Loading...</div>
       </div>

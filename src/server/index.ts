@@ -1,19 +1,21 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 
 import { parseOpenSpec, type OpenSpecData } from '../parser/index.js';
-import { createFileWatcher, type FileChangeEvent } from '../watcher/file-watcher.js';
+import { describeProject, discoverProjects, type DiscoveryResult, type DiscoveredProject } from '../discovery/projects.js';
+import { createFileWatcher } from '../watcher/file-watcher.js';
 import { WebSocketManager } from './websocket/handler.js';
 import { registerApiRoutes } from './routes/api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface ServerOptions {
-  openspecPath: string;
+  openspecPath?: string;
+  rootPath?: string;
   port: number;
   host?: string;
 }
@@ -23,126 +25,164 @@ export interface Server {
   close: () => Promise<void>;
 }
 
-/**
- * Create and start the OpenSpec Viewer server
- */
+interface ProjectContext {
+  path: string;
+  data: OpenSpecData;
+  wsManager: WebSocketManager;
+  watcher: ReturnType<typeof createFileWatcher>;
+}
+
 export async function createServer(options: ServerOptions): Promise<Server> {
-  const { openspecPath, port, host = '127.0.0.1' } = options;
+  const { port, host = '127.0.0.1' } = options;
+  const rootPath = resolve(options.rootPath || process.cwd());
+  const defaultProject = options.openspecPath ? describeProject(options.openspecPath, rootPath) : null;
+  const projects = new Map<string, DiscoveredProject>();
+  const contexts = new Map<string, Promise<ProjectContext>>();
+  const requestContexts = new WeakMap<FastifyRequest, ProjectContext>();
+  let discovery: Promise<DiscoveryResult> | null = null;
+  let cachedDiscovery: DiscoveryResult | null = null;
+  if (defaultProject) projects.set(defaultProject.id, defaultProject);
 
-  // Initialize data
-  let data: OpenSpecData | null = null;
-  const wsManager = new WebSocketManager();
-
-  // Parse initial data
-  const result = await parseOpenSpec(openspecPath);
-  if (result.data) {
-    data = result.data;
-    console.log(`Loaded OpenSpec: ${data.project.name}`);
-    console.log(`  ${data.specs.length} specs, ${data.changes.active.length} active changes`);
-  } else {
-    console.error('Failed to parse OpenSpec directory:', result.errors);
+  async function scan(forceRefresh = false): Promise<DiscoveryResult> {
+    if (!forceRefresh && cachedDiscovery?.projects.length) return cachedDiscovery;
+    if (!discovery) {
+      discovery = discoverProjects(rootPath).then((result) => {
+        projects.clear();
+        for (const project of result.projects) projects.set(project.id, project);
+        if (defaultProject) projects.set(defaultProject.id, defaultProject);
+        if (defaultProject && !result.projects.some((project) => project.id === defaultProject.id)) {
+          result.projects.push(defaultProject);
+        }
+        cachedDiscovery = result;
+        return result;
+      }).finally(() => { discovery = null; });
+    }
+    return discovery;
   }
 
-  if (result.warnings.length > 0) {
-    console.warn('Warnings:', result.warnings);
+  async function loadProject(project: DiscoveredProject): Promise<ProjectContext> {
+    const result = await parseOpenSpec(project.path);
+    if (!result.data) throw new Error(`Failed to load ${project.path}: ${result.errors.join('; ')}`);
+    if (result.errors.length || result.warnings.length) {
+      console.warn(`OpenSpec ${project.path}:`, ...result.errors, ...result.warnings);
+    }
+    const wsManager = new WebSocketManager();
+    const context: ProjectContext = {
+      path: project.path,
+      data: result.data,
+      wsManager,
+      watcher: createFileWatcher(project.path, async (event) => {
+        try {
+          const updated = await parseOpenSpec(project.path);
+          if (updated.errors.length || updated.warnings.length) {
+            console.warn(`OpenSpec ${project.path}:`, ...updated.errors, ...updated.warnings);
+          }
+          if (updated.data) {
+            context.data = updated.data;
+            wsManager.broadcastFileChange(event);
+          } else {
+            wsManager.broadcast({ type: 'error', message: 'Failed to refresh project; see server diagnostics' });
+          }
+        } catch (error) {
+          console.error(`Failed to refresh ${project.path}:`, error);
+          wsManager.broadcast({ type: 'error', message: 'Failed to refresh project' });
+        }
+      }),
+    };
+    context.watcher.on('error', (error) => {
+      console.error(`File watcher failed for ${project.path}:`, error);
+      wsManager.broadcast({ type: 'error', message: 'Project file watching failed' });
+    });
+    return context;
   }
 
-  // Create Fastify instance
-  const fastify = Fastify({
-    logger: false,
+  function getContext(request: FastifyRequest): ProjectContext {
+    const context = requestContexts.get(request);
+    if (!context) throw new Error('Project context not loaded');
+    return context;
+  }
+
+  const fastify = Fastify({ logger: false });
+  fastify.addHook('onClose', async () => {
+    for (const pending of contexts.values()) {
+      const context = await pending;
+      context.wsManager.close();
+      await context.watcher.close();
+    }
   });
-
-  // Register WebSocket plugin
   await fastify.register(fastifyWebsocket);
 
-  // WebSocket endpoint
-  fastify.register(async (fastify) => {
-    fastify.get('/ws', { websocket: true }, (socket, req) => {
-      wsManager.addClient(socket);
-    });
+  fastify.get<{ Querystring: { refresh?: boolean } }>('/api/projects', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: { refresh: { type: 'boolean' } },
+      },
+    },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return scan(request.query.refresh === true);
+  });
+  fastify.get('/', async (_request, reply) => {
+    return reply.redirect(defaultProject
+      ? `/dashboard?project=${encodeURIComponent(defaultProject.id)}`
+      : '/overview.html');
   });
 
-  // Register API routes
-  await registerApiRoutes(
-    fastify,
-    () => data,
-    () => openspecPath
-  );
-
-  // Serve static frontend files
-  const frontendPath = join(__dirname, '..', '..', 'dist-frontend');
-  const devFrontendPath = join(__dirname, '..', '..', 'frontend', 'dist');
-
-  // Check which frontend path exists
-  let staticPath = frontendPath;
-  if (existsSync(devFrontendPath)) {
-    staticPath = devFrontendPath;
-  } else if (!existsSync(frontendPath)) {
-    console.warn('Frontend build not found. Run `npm run build:frontend` first.');
-  }
-
-  if (existsSync(staticPath)) {
-    await fastify.register(fastifyStatic, {
-      root: staticPath,
-      prefix: '/',
+  fastify.register(async (scoped) => {
+    scoped.addHook('preValidation', async (request, reply) => {
+      const query = request.query as { project?: unknown };
+      const id = query.project === undefined ? defaultProject?.id : query.project;
+      if (typeof id !== 'string') {
+        return reply.status(400).send({ error: 'Select a project from /overview.html' });
+      }
+      if (!projects.has(id)) await scan();
+      const project = projects.get(id);
+      if (!project) return reply.status(404).send({ error: 'Project not found in this workspace' });
+      let pending = contexts.get(id);
+      if (!pending) {
+        pending = loadProject(project).catch((error) => {
+          contexts.delete(id);
+          throw error;
+        });
+        contexts.set(id, pending);
+      }
+      requestContexts.set(request, await pending);
     });
 
-    // SPA fallback - serve index.html for all non-API routes
+    scoped.get('/ws', { websocket: true }, (socket, request) => {
+      getContext(request).wsManager.addClient(socket);
+    });
+    await registerApiRoutes(scoped, (request) => getContext(request).data, (request) => getContext(request).path);
+  });
+
+  const frontendPath = join(__dirname, '..', '..', 'dist-frontend');
+  const devFrontendPath = join(__dirname, '..', '..', 'frontend', 'dist');
+  const staticPath = existsSync(devFrontendPath) ? devFrontendPath : frontendPath;
+  if (existsSync(staticPath)) {
+    await fastify.register(fastifyStatic, { root: staticPath, prefix: '/', index: false });
     fastify.setNotFoundHandler((request, reply) => {
       if (request.url.startsWith('/api/') || request.url.startsWith('/ws')) {
         return reply.status(404).send({ error: 'Not found' });
       }
       return reply.sendFile('index.html');
     });
+  } else {
+    console.warn('Frontend build not found. Run `npm run build:frontend` first.');
   }
 
-  // Set up file watcher
-  const watcher = createFileWatcher(openspecPath, async (event: FileChangeEvent) => {
-    console.log(`File ${event.type}: ${event.path}`);
-
-    // Re-parse affected data
-    const result = await parseOpenSpec(openspecPath);
-    if (result.data) {
-      data = result.data;
-      // Broadcast update to all clients
-      wsManager.broadcastFileChange(event, getRefreshData(event, data));
-    }
-  });
-
-  // Start server
   try {
     await fastify.listen({ port, host });
-  } catch (err: unknown) {
-    if (err instanceof Error && 'code' in err && err.code === 'EADDRINUSE') {
-      throw new Error(`Port ${port} is already in use. Please use a different port with --port <port>`);
-    }
-    throw err;
+  } catch (error) {
+    await fastify.close();
+    throw error;
   }
-  const url = `http://${host}:${port}`;
-
+  const address = fastify.server.address();
+  const actualPort = address && typeof address !== 'string' ? address.port : port;
+  const baseUrl = `http://${host}:${actualPort}`;
+  const url = defaultProject
+    ? `${baseUrl}/dashboard?project=${encodeURIComponent(defaultProject.id)}`
+    : `${baseUrl}/overview.html`;
   console.log(`OpenSpec Viewer running at ${url}`);
-
-  return {
-    url,
-    close: async () => {
-      await watcher.close();
-      await fastify.close();
-    },
-  };
-}
-
-/**
- * Get the data to send with a refresh event
- */
-function getRefreshData(event: FileChangeEvent, data: OpenSpecData): unknown {
-  switch (event.affectedEntity) {
-    case 'project':
-      return { project: data.project };
-    case 'specs':
-      return { specs: data.specs, stats: data.stats };
-    case 'changes':
-      return { changes: data.changes, stats: data.stats };
-    default:
-      return { stats: data.stats };
-  }
+  return { url, close: () => fastify.close() };
 }

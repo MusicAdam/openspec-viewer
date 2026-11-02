@@ -11,31 +11,35 @@ program
   .name('openspec-viewer')
   .description('Interactive browser viewer for OpenSpec directories')
   .version('0.1.0')
-  .argument('[path]', 'Path to OpenSpec directory', 'openspec')
+  .argument('[path]', 'Path to a single OpenSpec directory')
+  .option('--root <path>', 'Directory to search for OpenSpec projects (default: working directory)')
   .option('-p, --port <number>', 'Port to run server on', '3000')
   .option('--no-open', 'Do not open browser automatically')
-  .action(async (path: string, options: { port: string; open: boolean }) => {
-    const openspecPath = resolve(process.cwd(), path);
+  .action(async (path: string | undefined, options: { port: string; open: boolean; root?: string }) => {
+    const openspecPath = path ? resolve(process.cwd(), path) : undefined;
+    const rootPath = resolve(process.cwd(), options.root || '.');
     const port = parseInt(options.port, 10);
 
     // Validate path
     try {
-      const stats = await stat(openspecPath);
+      const stats = await stat(openspecPath || rootPath);
       if (!stats.isDirectory()) {
-        console.error(`Error: ${openspecPath} is not a directory`);
+        console.error(`Error: ${openspecPath || rootPath} is not a directory`);
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${openspecPath} does not exist`);
+      console.error(`Error: ${openspecPath || rootPath} does not exist`);
       process.exit(1);
     }
 
     console.log(`Starting OpenSpec Viewer...`);
-    console.log(`Path: ${openspecPath}`);
+    console.log(`Workspace: ${rootPath}`);
+    if (openspecPath) console.log(`Project: ${openspecPath}`);
 
     try {
       const server = await createServer({
         openspecPath,
+        rootPath,
         port,
       });
 

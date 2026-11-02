@@ -3,6 +3,7 @@ import { tick } from 'svelte';
 import type { Project, Stats, SpecSummary, ChangeSummary } from '../lib/api';
 import { getProject, getStats, getSpecs, getChanges } from '../lib/api';
 import { wsClient, type WSMessage } from '../lib/websocket';
+import { withProject } from '../lib/projectContext';
 
 // Loading states
 export const isLoading = writable(true);
@@ -66,6 +67,10 @@ export function setupWebSocket() {
   wsClient.connect();
 
   return wsClient.subscribe(async (message: WSMessage) => {
+    if (message.type === 'error') {
+      addToast(message.message || 'Project update failed', 'error');
+      return;
+    }
     if (message.type === 'data:refresh') {
       const entity = message.entity;
       const scrollY = window.scrollY;
@@ -108,7 +113,7 @@ export function setupWebSocket() {
 // Simple routing
 export function navigateTo(path: string) {
   currentRoute.set(path);
-  window.history.pushState({}, '', path);
+  window.history.pushState({}, '', withProject(path));
 }
 
 // Handle browser back/forward

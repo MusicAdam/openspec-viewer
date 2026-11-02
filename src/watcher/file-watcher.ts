@@ -18,10 +18,8 @@ export function createFileWatcher(
   onChange: FileChangeHandler
 ): FSWatcher {
   const watcher = chokidar.watch(openspecPath, {
-    ignored: [
-      /(^|[\/\\])\../, // Ignore dotfiles
-      /node_modules/,
-    ],
+    ignored: (filePath) => relative(openspecPath, filePath).split(sep)
+      .some((part) => part.startsWith('.') || part === 'node_modules'),
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: {
