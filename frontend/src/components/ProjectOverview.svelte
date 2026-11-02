@@ -1,22 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getProjects, type ProjectOverview } from '../lib/api';
+  import { getProjects, setWorkspaceRoot, type ProjectOverview } from '../lib/api';
 
   let data: ProjectOverview | null = null;
   let loading = true;
   let error = '';
   let filter = '';
   let lastScanned = '';
+  let rootDraft = '';
 
   $: visibleProjects = (data?.projects || []).filter((project) =>
     `${project.name} ${project.relativePath}`.toLowerCase().includes(filter.toLowerCase())
   );
 
-  async function loadProjects(forceRefresh = false) {
+  async function loadProjects(request: () => Promise<ProjectOverview> = () => getProjects()) {
     loading = true;
     error = '';
     try {
-      data = await getProjects(forceRefresh);
+      data = await request();
+      rootDraft = data.root;
       lastScanned = new Date(data.scannedAt).toLocaleTimeString();
     } catch (cause) {
       error = cause instanceof Error ? cause.message : 'Project discovery failed';
@@ -36,7 +38,7 @@
       <p class="text-gray-400 mt-2">Explore the folders using OpenSpec, then pick up where you left off.</p>
     </div>
     <button
-      onclick={() => loadProjects(true)}
+      onclick={() => loadProjects(() => getProjects(true))}
       disabled={loading}
       class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
     >
@@ -46,12 +48,54 @@
       {loading ? 'Scanning folders...' : 'Refresh projects'}
     </button>
   </div>
-  {#if data}
-    <div class="mt-6 pt-4 border-t border-gray-700 flex flex-wrap items-center justify-between gap-3 text-sm">
-      <p class="text-gray-400 break-all"><span class="text-gray-500">Workspace root</span> <code class="ml-2 text-gray-200">{data.root}</code></p>
-      <p class="text-gray-400"><span class="font-semibold text-blue-300">{data.projects.length}</span> projects found <span class="ml-3 text-gray-500">Scanned {lastScanned}</span></p>
-    </div>
-  {/if}
+  <div class="mt-6 pt-4 border-t border-gray-700">
+    <form
+      onsubmit={(event) => {
+        event.preventDefault();
+        if (!loading && rootDraft.trim()) void loadProjects(() => setWorkspaceRoot(rootDraft));
+      }}
+      aria-busy={loading}
+    >
+      <label for="workspace-root" class="block text-sm font-medium text-gray-300 mb-2">Workspace root</label>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input
+          id="workspace-root"
+          type="text"
+          bind:value={rootDraft}
+          disabled={loading}
+          required
+          autocomplete="off"
+          spellcheck={false}
+          aria-describedby="workspace-root-help"
+          placeholder="Enter a workspace folder path..."
+          class="min-w-0 flex-1 px-4 py-2 rounded-lg bg-gray-900 border border-gray-600 text-gray-200 font-mono text-sm placeholder-gray-500 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          disabled={loading || !rootDraft.trim()}
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+        >Scan folder</button>
+        <button
+          type="button"
+          onclick={() => loadProjects(() => setWorkspaceRoot())}
+          disabled={loading || (data?.root === data?.defaultRoot && rootDraft === data?.defaultRoot)}
+          class="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+        >Reset to default</button>
+      </div>
+      <p id="workspace-root-help" class="mt-2 text-xs text-gray-500">
+        Enter a folder on the computer running this viewer. Your choice lasts until the viewer restarts.
+      </p>
+    </form>
+    {#if data}
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p class="text-gray-500 break-all">Default: <code class="text-gray-400">{data.defaultRoot}</code></p>
+        <p class="text-gray-400"><span class="font-semibold text-blue-300">{data.projects.length}</span> projects found <span class="ml-3 text-gray-500">Scanned {lastScanned}</span></p>
+      </div>
+      {#if rootDraft !== data.root}
+        <p class="mt-2 text-xs text-gray-400 break-all">Showing projects from <code>{data.root}</code>. Scan folder to apply your new path.</p>
+      {/if}
+    {/if}
+  </div>
 </section>
 
 {#if error}

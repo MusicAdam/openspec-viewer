@@ -15,6 +15,26 @@ the current working directory recursively. `--root` MUST allow an alternative
 workspace root. An explicit positional OpenSpec directory MUST still open that
 project directly and remain selectable in the overview.
 
+### Session-only workspace selection
+
+The overview MUST offer an editable workspace folder path, Scan folder, and
+Reset to default. The default MUST remain the startup working directory, or
+the explicit `--root` value. Relative input MUST resolve against this startup
+root rather than the last selected folder.
+
+A successful selection MUST scan the new root and atomically replace the active
+workspace and cache. Invalid, missing, unreadable, file, or linked roots MUST
+report a useful error without changing the last successful workspace or cards.
+A valid empty root MUST clear the previous cards. Late scans of the old root
+MUST NOT overwrite the newly selected workspace or its cache.
+
+Reset MUST restore the startup root. Selection MUST be shared only for the
+running viewer server, survive overview revisits, and MUST NOT be saved across
+server restarts. Already opened project tabs and their live updates MUST remain
+scoped to their original project when another overview changes the workspace.
+Changing the workspace MUST require a JSON POST; cross-site browser requests
+MUST be rejected.
+
 ### Recognition and scan boundaries
 
 An `openspec` directory MUST qualify when it contains a `specs` directory, a
@@ -38,7 +58,8 @@ project name and its Dashboard, Specs, and Changes navigation.
 ### Cached discovery and explicit refresh
 
 A nonempty discovered project list MUST be cached for the lifetime of the viewer
-server. Revisiting or reloading the overview MUST reuse this list without
+server while that workspace remains selected. Revisiting or reloading the
+overview MUST reuse this list without
 scanning the workspace. An empty list MUST be scanned again on the next overview
 request without requiring a manual refresh.
 
@@ -72,6 +93,14 @@ require watching every directory in the workspace.
   automatically.
 - Given a refresh failure, the previously discovered projects remain available
   and the error is displayed.
+- Given a different workspace path, Scan folder lists only that workspace's
+  projects while existing project tabs remain usable.
+- Given an invalid workspace path, the root and previous project cards remain
+  unchanged and an error is displayed.
+- Given a selected empty workspace, adding a project and revisiting discovers
+  it automatically.
+- Given a changed root, Reset to default or restarting restores the startup
+  workspace; only a restart clears all cached state.
 - Given two tabs viewing changes with the same name in different projects,
   their content, live updates, and persisted suggestions remain separate.
 - Given an explicit test-openspec path, the project opens directly and the

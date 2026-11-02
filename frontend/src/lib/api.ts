@@ -4,6 +4,7 @@ const API_BASE = '/api';
 
 export interface ProjectOverview {
   root: string;
+  defaultRoot: string;
   projects: { id: string; name: string; path: string; relativePath: string }[];
   warnings: string[];
   scannedAt: string;
@@ -12,6 +13,19 @@ export interface ProjectOverview {
 export async function getProjects(forceRefresh = false): Promise<ProjectOverview> {
   const response = await fetch(`/api/projects${forceRefresh ? '?refresh=true' : ''}`);
   if (!response.ok) throw new Error(`Failed to discover projects: ${response.status}`);
+  return response.json();
+}
+
+export async function setWorkspaceRoot(root?: string): Promise<ProjectOverview> {
+  const response = await fetch('/api/workspace', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ root }),
+  });
+  if (!response.ok) {
+    const problem: { message?: string; error?: string } = await response.json();
+    throw new Error(problem.message || problem.error || `Failed to change workspace: ${response.status}`);
+  }
   return response.json();
 }
 

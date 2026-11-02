@@ -59,6 +59,12 @@ The workspace is the directory where you launch the command, not a hardcoded
 drive. For example, launching from `D:\` searches that drive; launching from
 another workspace on Windows, macOS, or Linux searches that workspace instead.
 Use `--root` to choose another root without changing your working directory.
+You can also edit **Workspace root** in the overview and choose **Scan folder**.
+The folder is resolved on the computer running the viewer; relative paths are
+relative to the startup workspace. **Reset to default** restores that startup
+root (the working directory, or `--root` when supplied). This choice is shared by
+overview pages using the same viewer server and lasts only until that server
+restarts; it is not saved in browser storage or a configuration file.
 
 Discovery looks recursively for an `openspec` directory containing a `specs`
 directory, a `changes` directory, or a `config.yaml` file. It stops descending
@@ -70,10 +76,14 @@ including projects created since the previous scan. Large workspaces can take ti
 The viewer caches a nonempty project list in memory for as long as the server
 runs. Returning to the overview or reloading the page reuses that list without
 scanning again. If the list is empty, the next overview request searches
-automatically. Only **Refresh projects** replaces an existing nonempty list;
+automatically. **Refresh projects** or selecting a different workspace replaces
+an existing nonempty list;
 previous cards remain visible during refresh and after a failed refresh. The
 displayed scan time reflects the actual discovery, not the latest page visit.
-Restarting the server clears this cache.
+An invalid, unreadable, missing, or linked workspace root leaves the current
+workspace and cache unchanged. Selecting a valid empty folder clears the old
+cards; empty-folder discovery still retries automatically. Restarting the server
+clears the cache and restores the startup root.
 
 `config.yaml` is a discovery marker only; the viewer still reads Markdown files,
 not YAML configuration. Missing `project.md` is allowed. Explicit directory
@@ -81,8 +91,9 @@ arguments remain supported, including directories not named `openspec` (such as
 the bundled `test-openspec` fixture), and are included in the overview.
 
 Project selection is part of the URL, so separate tabs can view different
-projects without changing each other's data or live updates. Saved suggestions
-are scoped by project and change name; old unscoped suggestions are not assigned
+projects without changing each other's data or live updates. Already opened
+project tabs remain usable when the overview switches to another workspace.
+Saved suggestions are scoped by project and change name; old unscoped suggestions are not assigned
 to a project automatically. Only opened projects are watched, not the entire
 workspace. The overview discovers projects on demand rather than continuously
 watching the filesystem.
