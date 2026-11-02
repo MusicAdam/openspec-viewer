@@ -16,6 +16,7 @@
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "start": "node dist/cli/index.js",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -41,14 +42,16 @@
   "files": [
     "bin/",
     "dist/",
-    "dist-frontend/"
+    "dist-frontend/",
+    "vendor/deepmerge/"
   ],
   "dependencies": {
-    "@fastify/static": "^8.3.0",
+    "@fastify/send": "^4.2.0",
     "@fastify/websocket": "^11.3.4",
     "chokidar": "^4.0.3",
     "commander": "^13.1.0",
     "fastify": "^5.12.7",
+    "fastify-plugin": "^6.0.0",
     "marked": "^15.0.12",
     "open": "^10.2.0"
   },
@@ -58,6 +61,7 @@
     "@types/ws": "^8.18.2",
     "autoprefixer": "^10.6.1",
     "concurrently": "^9.2.5",
+    "deepmerge": "file:vendor/deepmerge",
     "postcss": "^8.5.31",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.7",
@@ -65,5 +69,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^6.4.5"
+  },
+  "overrides": {
+    "deepmerge": "$deepmerge"
   }
 }

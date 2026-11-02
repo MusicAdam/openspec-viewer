@@ -12,20 +12,31 @@ Requires Node.js >= 20.0.0
 
 ### Dependency maintenance
 
-The dependency refresh updates packages and the lockfile within the existing
-direct-dependency major versions. It preserves the declared Node.js requirement
-and does not bundle a framework, styling-system, or TypeScript major migration.
-Install reproducibly with `npm ci`; validate with `npm run build` and
-`npm run typecheck`.
+The dependency refresh updates packages and the lockfile while preserving the
+declared Node.js requirement. It does not bundle unrelated framework, styling,
+or TypeScript major migrations. Install reproducibly with `npm ci`; validate
+with `npm run build`, `npm run typecheck`, and `npm test`.
 
-The npm audit check on 2026-11-02 decreased from 25 findings (including 2 critical
-and 15 high) to 6: no critical, 1 high, 2 moderate, and 3 low. This is not a
-clean-audit claim or a determination of application exploitability.
-`@fastify/static` and its `glob`/`minimatch` chain still have advisories whose
-suggested fix crosses a direct-dependency major version.
-The Svelte Vite plugin/inspector and `deepmerge` chain still has low-severity
-findings for which npm reports no available fix. These require separately
-reviewed follow-up work rather than a forced upgrade or an unverified override.
+Compatible updates initially reduced npm audit findings from 25 to 6. Because
+upgrading the affected plugins still retained vulnerable transitive dependencies,
+the remaining chains are addressed explicitly:
+
+- Static assets use a small Fastify plugin built on `@fastify/send`, the sender
+  already used by the old static plugin. It preserves GET/HEAD, conditional and
+  range requests, and the SPA fallback without depending on `@fastify/static`,
+  `glob`, or `minimatch`. It rejects traversal, alternate separators, dotfiles,
+  and links outside the frontend root; rejected paths do not use the SPA fallback.
+- Svelte configuration merging uses a checked-in, MIT-licensed compatibility
+  fork with the concrete upstream prototype-poisoning patch. This is a distinctly
+  named local package, not a fictional patched upstream release. Its npm override
+  is backed by security and API-compatibility regressions, not an audit exclusion.
+  See [the fork's provenance and maintenance guide](vendor/deepmerge/README.md).
+
+The npm audit check on 2026-11-02 reports **zero findings** after these changes.
+This is not a claim that the entire application has no vulnerabilities: npm does
+not audit unpublished local code. The fork's patch and the static-serving
+boundaries therefore have explicit regression tests. The project owns the local
+fork until a verified upstream fix can replace it.
 
 ## Usage
 

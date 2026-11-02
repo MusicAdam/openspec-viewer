@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import fastifyStatic from '@fastify/static';
+import fastifyStatic from './static.js';
 import fastifyWebsocket from '@fastify/websocket';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

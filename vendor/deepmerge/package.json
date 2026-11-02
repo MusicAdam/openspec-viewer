@@ -1,0 +1,15 @@
+{
+  "name": "@openspec-viewer/deepmerge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locally maintained deepmerge 4.3.1 compatibility fork with prototype-poisoning protection",
+  "main": "index.cjs",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "files": [
+    "index.cjs",
+    "index.d.ts",
+    "LICENSE",
+    "README.md"
+  ]
+}
