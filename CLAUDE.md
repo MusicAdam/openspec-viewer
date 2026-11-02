@@ -2,6 +2,11 @@
 
 Interactive browser viewer for OpenSpec directories.
 
+GitHub Copilot contributors also have an automatically discoverable entry point
+in [.github/copilot-instructions.md](.github/copilot-instructions.md). This file
+remains available for Claude users and shared architecture/format guidance;
+keep the two instruction files consistent.
+
 ## Project Structure
 
 ```
