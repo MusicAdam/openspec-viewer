@@ -148,7 +148,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
       </svg>
-      Generate Claude Prompt
+      Generate Prompt
     </button>
     <p class="text-xs text-gray-500 text-center mt-2">
       {suggestions.length} suggestion{suggestions.length === 1 ? '' : 's'}
@@ -162,7 +162,7 @@
     <div class="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
       <!-- Modal header -->
       <div class="flex items-center justify-between p-4 border-b border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-100">Generated Claude Prompt</h3>
+        <h3 class="text-lg font-semibold text-gray-100">Generated Prompt</h3>
         <button
           onclick={handleCloseModal}
           class="p-1 hover:bg-gray-700 rounded transition-colors"

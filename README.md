@@ -64,6 +64,28 @@ Each change can contain:
 | `specs/` | Spec delta files showing ADDED/MODIFIED/REMOVED requirements |
 | `<folder>/` | Any subfolder becomes its own tab with grouped files |
 
+## Suggestion prompts
+
+Use **Generate Prompt** in the suggestions panel to collect review feedback,
+preview it, and copy it into GitHub Copilot, Claude, or another coding assistant.
+The generated text is assistant-neutral; no assistant integration or account is
+required, and generating a prompt does not send your files to an external service.
+
+The button and preview title deliberately avoid naming a particular assistant:
+the existing prompt format already works across assistants. This wording-only
+feature preserves suggestion content and the clipboard flow,
+and can be reviewed independently of workspace discovery.
+
+Prompts include the absolute change-directory path and the absolute path and line
+number of each located source file, including spec deltas. This disambiguates
+projects that contain the same change or file names. If the original text cannot
+be located, the prompt says so rather than inventing a filename. Prompts can
+contain local directory names; review them before sharing with an assistant.
+
+Contributors can run the focused prompt regressions with `npm test` after
+`npm ci`. `npm run build` checks both the backend and frontend. These checks do
+not require the workspace overview feature.
+
 ## License
 
 MIT

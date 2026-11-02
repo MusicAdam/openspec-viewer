@@ -1,10 +1,9 @@
 import type { Suggestion } from '../stores/suggestions';
-import type { Change, ChangeFile } from './api';
+import type { Change } from './api';
 
 interface SuggestionLocation {
-  fileName: string;
-  filePath: string;
-  lineNumber: number | null;
+  absolutePath: string;
+  lineNumber: number;
 }
 
 /**
@@ -25,8 +24,7 @@ function findSuggestionLocation(
           const lineNumber = linesBeforeMatch.length;
 
           return {
-            fileName: file.name,
-            filePath: file.path,
+            absolutePath: file.absolutePath,
             lineNumber,
           };
         }
@@ -42,8 +40,7 @@ function findSuggestionLocation(
       const lineNumber = linesBeforeMatch.length;
 
       return {
-        fileName: `specs/${delta.capability}.md`,
-        filePath: `specs/${delta.capability}.md`,
+        absolutePath: delta.absolutePath,
         lineNumber,
       };
     }
@@ -53,7 +50,7 @@ function findSuggestionLocation(
 }
 
 /**
- * Generate a Claude prompt with all suggestions for a change
+ * Generate an assistant-neutral prompt with all suggestions for a change
  */
 export function generatePrompt(
   changeName: string,
@@ -64,14 +61,9 @@ export function generatePrompt(
     .map((suggestion, index) => {
       const location = findSuggestionLocation(suggestion.originalText, change);
 
-      let locationInfo = '';
-      if (location) {
-        locationInfo = `**File:** \`${location.filePath}\``;
-        if (location.lineNumber) {
-          locationInfo += ` (line ${location.lineNumber})`;
-        }
-        locationInfo += '\n';
-      }
+      const locationInfo = location
+        ? `**File:** \`${location.absolutePath}\` (line ${location.lineNumber})\n`
+        : '**File:** Not identified; search for the original text within the change directory above.\n';
 
       return `### Suggestion ${index + 1}
 ${locationInfo}
@@ -84,6 +76,8 @@ ${suggestion.suggestedChange}`;
     .join('\n\n');
 
   return `I'm reviewing the change "${changeName}" and have the following suggestions:
+
+**Change directory:** \`${change.path}\`
 
 ## Suggestions
 

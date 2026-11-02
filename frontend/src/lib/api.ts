@@ -65,6 +65,7 @@ export interface Task {
 
 export interface SpecDelta {
   capability: string;
+  absolutePath: string;
   content: string;
   operations: {
     type: 'added' | 'modified' | 'removed' | 'renamed';
