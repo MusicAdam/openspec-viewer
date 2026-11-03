@@ -1,9 +1,10 @@
 import type { Suggestion } from '../stores/suggestions';
 import type { Change } from './api';
+import { findMarkdownTextLocation } from './markdown';
 
 interface SuggestionLocation {
   absolutePath: string;
-  lineNumber: number;
+  lineNumber?: number;
 }
 
 /**
@@ -13,40 +14,25 @@ function findSuggestionLocation(
   originalText: string,
   change: Change
 ): SuggestionLocation | null {
-  // Search through all file groups
+  const sources = new Map<string, string>();
   for (const group of change.fileGroups) {
     for (const file of group.files) {
       if (file.type === 'markdown' && file.content) {
-        const index = file.content.indexOf(originalText);
-        if (index !== -1) {
-          // Calculate line number
-          const linesBeforeMatch = file.content.substring(0, index).split('\n');
-          const lineNumber = linesBeforeMatch.length;
-
-          return {
-            absolutePath: file.absolutePath,
-            lineNumber,
-          };
-        }
+        sources.set(file.absolutePath, file.content);
       }
     }
   }
 
-  // Also check spec deltas
   for (const delta of change.specDeltas) {
-    const index = delta.content.indexOf(originalText);
-    if (index !== -1) {
-      const linesBeforeMatch = delta.content.substring(0, index).split('\n');
-      const lineNumber = linesBeforeMatch.length;
-
-      return {
-        absolutePath: delta.absolutePath,
-        lineNumber,
-      };
-    }
+    sources.set(delta.absolutePath, delta.content);
   }
 
-  return null;
+  const locations: SuggestionLocation[] = [];
+  for (const [absolutePath, content] of sources) {
+    const location = findMarkdownTextLocation(content, originalText);
+    if (location) locations.push({ absolutePath, ...location });
+  }
+  return locations.length === 1 ? locations[0] : null;
 }
 
 /**
@@ -62,7 +48,7 @@ export function generatePrompt(
       const location = findSuggestionLocation(suggestion.originalText, change);
 
       const locationInfo = location
-        ? `**File:** \`${location.absolutePath}\` (line ${location.lineNumber})\n`
+        ? `**File:** \`${location.absolutePath}\`${location.lineNumber ? ` (line ${location.lineNumber})` : ''}\n`
         : '**File:** Not identified; search for the original text within the change directory above.\n';
 
       return `### Suggestion ${index + 1}

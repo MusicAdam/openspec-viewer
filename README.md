@@ -82,6 +82,12 @@ projects that contain the same change or file names. If the original text cannot
 be located, the prompt says so rather than inventing a filename. Prompts can
 contain local directory names; review them before sharing with an assistant.
 
+Source lookup also matches the rendered text of Markdown blocks, including
+inline code, emphasis, links and entities. Unrelated live updates keep those
+suggestions. If several files match, no filename is guessed; a uniquely
+identified file can be included without a line number when its precise line
+cannot be established.
+
 Contributors can run the focused prompt regressions with `npm test` after
 `npm ci`. `npm run build` checks both the backend and frontend. These checks do
 not require the workspace overview feature.
