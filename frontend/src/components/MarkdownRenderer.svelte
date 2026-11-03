@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { mermaidDiagrams } from '../lib/mermaid';
   import { renderMarkdown, renderMarkdownWithBlocks, highlightDeltas } from '../lib/markdown';
   import { suggestionStore, blockSuggestionMap } from '../stores/suggestions';
 
@@ -23,6 +23,7 @@
 
     // Find the clicked block
     const target = event.target as HTMLElement;
+    if (target.closest('[data-diagram-control]')) return;
     const block = target.closest('.suggestion-block') as HTMLElement | null;
 
     if (block) {
@@ -78,6 +79,7 @@
   class="markdown-body"
   class:suggestion-mode={suggestionModeEnabled}
   bind:this={containerElement}
+  use:mermaidDiagrams={html}
   onclick={handleBlockClick}
   role={suggestionModeEnabled ? "application" : undefined}
   aria-label={suggestionModeEnabled ? "Click on a text block to add a suggestion" : undefined}

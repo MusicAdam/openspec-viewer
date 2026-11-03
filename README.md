@@ -42,6 +42,25 @@ openspec-viewer --no-open          # Don't auto-open browser
 - Search across all content
 - Dark mode UI
 - Folder-based tab grouping for change files
+- Graphical Mermaid diagrams in Markdown, with zoom, full screen and source view
+
+### Mermaid diagrams
+
+Markdown fenced blocks labelled `mermaid` are rendered as diagrams, including
+flowcharts, relationship diagrams and sequence diagrams. Rendering happens in
+your browser using bundled, lazily loaded assets; diagram text is not sent to
+a diagram service and no CDN is required. Other code blocks remain code.
+
+Use **Zoom in**, **Zoom out**, **Fit**, or **Full screen** (where supported)
+to inspect larger diagrams. **View Mermaid source** retains the original code.
+Invalid diagrams show an error with the source expanded instead of making the
+document unreadable. Suggestion mode continues to select the original code block,
+not generated SVG text, and diagrams update when their Markdown changes.
+
+Mermaid runs in strict security mode with HTML labels and diagram click handlers
+disabled. Diagram configuration cannot relax the configured security and size
+limits. Mermaid 11 preserves the existing Node.js requirement; adopting Mermaid
+12's newer Node.js requirement is a separate migration.
 
 ## OpenSpec Format
 
