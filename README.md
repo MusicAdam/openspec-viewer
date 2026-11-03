@@ -62,6 +62,9 @@ disabled. Diagram configuration cannot relax the configured security and size
 limits. Mermaid 11 preserves the existing Node.js requirement; adopting Mermaid
 12's newer Node.js requirement is a separate migration.
 
+A scoped KaTeX override selects its patched 0.18 release for Mermaid, avoiding
+the vulnerable 0.16 dependency without raising the project's Node.js minimum.
+
 ## OpenSpec Format
 
 [OpenSpec](https://github.com/Fission-AI/OpenSpec) is a specification-driven development framework:
