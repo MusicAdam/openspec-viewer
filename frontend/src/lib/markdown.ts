@@ -18,6 +18,40 @@ export function renderMarkdown(content: string): string {
  */
 const SELECTABLE_BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'pre'];
 
+export function findMarkdownTextLocation(
+  content: string,
+  originalText: string
+): { lineNumber?: number } | null {
+  const source = content.replace(/\r\n?/g, '\n');
+  const text = originalText.replace(/\r\n?/g, '\n').trim();
+  if (!text) return null;
+
+  const index = source.indexOf(text);
+  if (index !== -1) {
+    return {
+      lineNumber: source.indexOf(text, index + 1) === -1
+        ? source.slice(0, index).split('\n').length
+        : undefined,
+    };
+  }
+
+  const parser = new DOMParser();
+  const matches: Array<number | undefined> = [];
+  let cursor = 0;
+  for (const token of marked.lexer(source)) {
+    const start = source.indexOf(token.raw, cursor);
+    if (start !== -1) cursor = start + token.raw.length;
+    const doc = parser.parseFromString(marked.parser([token]), 'text/html');
+    const blocks = Array.from(doc.querySelectorAll(SELECTABLE_BLOCK_TAGS.join(',')));
+    if (!blocks.some((block) => block.textContent?.trim() === text)) continue;
+
+    // Nested blocks can identify the file without proving an exact source line.
+    const exactLine = start !== -1 && (token.type === 'paragraph' || token.type === 'heading');
+    matches.push(exactLine ? source.slice(0, start).split('\n').length : undefined);
+  }
+  return matches.length ? { lineNumber: matches.length === 1 ? matches[0] : undefined } : null;
+}
+
 /**
  * Render markdown with selectable blocks wrapped in divs with unique IDs
  * Used when suggestion mode is enabled

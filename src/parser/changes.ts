@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import type { Change, ChangeFile, FileGroup, SpecDelta, DeltaOperation, ParseResult } from '../shared/types.js';
 import { parseTasks } from './tasks.js';
 
@@ -226,6 +226,7 @@ async function parseChange(
 ): Promise<ParseResult<Change>> {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const absoluteChangePath = resolve(changePath);
 
   // Extract date from archived change name (YYYY-MM-DD-name format)
   let archivedDate: string | null = null;
@@ -237,7 +238,7 @@ async function parseChange(
   }
 
   // Discover all .md and .html files recursively
-  const files = await discoverChangeFiles(changePath);
+  const files = await discoverChangeFiles(absoluteChangePath);
 
   // Load content for markdown files
   for (const file of files) {
@@ -265,12 +266,12 @@ async function parseChange(
   const { tasks, progress: taskProgress } = parseTasks(tasksContent || '');
 
   // Parse spec deltas
-  const specDeltas = await parseSpecDeltas(join(changePath, 'specs'));
+  const specDeltas = await parseSpecDeltas(join(absoluteChangePath, 'specs'));
 
   return {
     data: {
       name,
-      path: changePath,
+      path: absoluteChangePath,
       isArchived,
       archivedDate,
       proposal,
@@ -306,6 +307,7 @@ async function parseSpecDeltas(specsPath: string): Promise<{ data: SpecDelta[]; 
 
           deltas.push({
             capability: entry.name,
+            absolutePath: specPath,
             content,
             operations,
           });

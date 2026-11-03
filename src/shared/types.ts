@@ -61,6 +61,7 @@ export interface Change {
 
 export interface SpecDelta {
   capability: string;
+  absolutePath: string;
   content: string;
   operations: DeltaOperation[];
 }

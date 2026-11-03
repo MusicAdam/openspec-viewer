@@ -1,4 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
+import { findMarkdownTextLocation } from '../lib/markdown';
 
 export interface Suggestion {
   id: string;
@@ -144,11 +145,11 @@ function createSuggestionStore() {
       });
     },
 
-    reconcileSuggestions(newContent: string): number {
+    reconcileSuggestions(contents: string[]): number {
       let resolvedCount = 0;
       update((state) => {
         const remaining = state.suggestions.filter((s) => {
-          const stillExists = newContent.includes(s.originalText);
+          const stillExists = contents.some((content) => findMarkdownTextLocation(content, s.originalText) !== null);
           if (!stillExists) {
             resolvedCount++;
           }

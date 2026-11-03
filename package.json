@@ -16,6 +16,7 @@
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "start": "node dist/cli/index.js",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -58,6 +59,7 @@
     "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
+    "linkedom": "^0.18.12",
     "postcss": "^8.4.49",
     "svelte": "^5.16.1",
     "svelte-check": "^4.1.2",

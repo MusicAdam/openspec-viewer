@@ -96,8 +96,7 @@
       contentParts.push(delta.content);
     }
 
-    const combinedContent = contentParts.join('\n');
-    const resolvedCount = suggestionStore.reconcileSuggestions(combinedContent);
+    const resolvedCount = suggestionStore.reconcileSuggestions(contentParts);
 
     if (resolvedCount > 0) {
       const message = resolvedCount === 1
