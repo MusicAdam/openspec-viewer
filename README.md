@@ -76,9 +76,11 @@ the existing prompt format already works across assistants. This wording-only
 feature preserves suggestion content and the clipboard flow,
 and can be reviewed independently of workspace discovery.
 
-Prompts include the absolute change-directory path and the absolute path and line
-number of each located source file, including spec deltas. This disambiguates
-projects that contain the same change or file names. If the original text cannot
+Prompts include the absolute change-directory path once. Each located source file
+uses a path relative to that directory, with its line number when known:
+`proposal.md`, `diagrams.md`, or `specs/authentication/spec.md`. This disambiguates
+projects and nested files without repeating the complete root for every suggestion.
+If the original text cannot
 be located, the prompt says so rather than inventing a filename. Prompts can
 contain local directory names; review them before sharing with an assistant.
 

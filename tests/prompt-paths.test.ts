@@ -49,7 +49,7 @@ function changeAt(path: string, separator: string): Change {
   };
 }
 
-test('absolute proposal paths distinguish identical changes on Windows and POSIX', () => {
+test('absolute change directories distinguish relative filenames on Windows and POSIX without repeating the root', () => {
   for (const [first, second, separator] of [
     ['D:\\first\\openspec\\changes\\same-change', 'D:\\second\\openspec\\changes\\same-change', '\\'],
     ['/workspace/first/openspec/changes/same-change', '/workspace/second/openspec/changes/same-change', '/'],
@@ -57,14 +57,17 @@ test('absolute proposal paths distinguish identical changes on Windows and POSIX
     const firstPrompt = generatePrompt('same-change', changeAt(first, separator), [suggestion]);
     const secondPrompt = generatePrompt('same-change', changeAt(second, separator), [suggestion]);
     assert.ok(firstPrompt.includes(`**Change directory:** \`${first}\``));
-    assert.ok(firstPrompt.includes(`**File:** \`${first}${separator}proposal.md\` (line 3)`));
-    assert.ok(secondPrompt.includes(`**File:** \`${second}${separator}proposal.md\` (line 3)`));
+    assert.ok(secondPrompt.includes(`**Change directory:** \`${second}\``));
+    assert.ok(firstPrompt.includes('**File:** `proposal.md` (line 3)'));
+    assert.ok(secondPrompt.includes('**File:** `proposal.md` (line 3)'));
+    assert.equal(firstPrompt.split(first).length, 2);
+    assert.equal(secondPrompt.split(second).length, 2);
     assert.notEqual(firstPrompt, secondPrompt);
     assert.ok(firstPrompt.includes(suggestion.suggestedChange));
   }
 });
 
-test('parsed active and archived spec deltas retain their exact absolute source paths in prompts', async (t) => {
+test('parsed active and archived spec deltas use their full relative path under the absolute change directory', async (t) => {
   const root = await mkdtemp(join(dirname(fileURLToPath(import.meta.url)), '.prompt-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   for (const changeName of ['same-change', join('archive', '2026-01-01-same-change')]) {
@@ -79,9 +82,39 @@ test('parsed active and archived spec deltas retain their exact absolute source 
     assert.equal(result.data.files[0].absolutePath, resolve(changePath, 'proposal.md'));
     assert.equal(result.data.specDeltas[0].absolutePath, resolve(specPath));
     const prompt = generatePrompt(result.data.name, result.data, [suggestion]);
-    assert.ok(prompt.includes(`**File:** \`${resolve(specPath)}\` (line 3)`));
+    assert.ok(prompt.includes(`**Change directory:** \`${resolve(changePath)}\``));
+    assert.ok(prompt.includes('**File:** `specs/authentication/spec.md` (line 3)'));
+    assert.ok(!prompt.includes(`**File:** \`${resolve(specPath)}\``));
     const proposalPrompt = generatePrompt(result.data.name, result.data, [{ ...suggestion, originalText: 'Original proposal' }]);
-    assert.ok(proposalPrompt.includes(`**File:** \`${resolve(changePath, 'proposal.md')}\` (line 3)`));
+    assert.ok(proposalPrompt.includes('**File:** `proposal.md` (line 3)'));
+  }
+});
+
+test('relative filenames preserve subdirectories for identically named files', () => {
+  for (const [path, separator] of [
+    ['D:\\project\\openspec\\changes\\same-change', '\\'],
+    ['/workspace/openspec/changes/same-change', '/'],
+  ]) {
+    const change = changeAt(path, separator);
+    const files = ['notes', 'examples'].map((folder) => ({
+      ...change.files[0],
+      path: `${folder}${separator}proposal.md`,
+      absolutePath: `${path}${separator}${folder}${separator}proposal.md`,
+      folder,
+      content: `${folder} requirement`,
+    }));
+    change.files = files;
+    change.fileGroups = [{ name: 'Documents', folder: '', files, isCore: false }];
+    const prompt = generatePrompt(change.name, change, files.map((file, index) => ({
+      ...suggestion,
+      id: `${index}`,
+      originalText: file.content,
+    })));
+    for (const file of files) {
+      assert.ok(prompt.includes(`**File:** \`${file.path}\` (line 1)`));
+      assert.ok(!prompt.includes(file.absolutePath));
+    }
+    assert.equal(prompt.split(path).length, 2);
   }
 });
 
@@ -112,7 +145,7 @@ test('rendered Markdown suggestions locate arbitrary files and keep their origin
     change.fileGroups.push({ name: 'Other', folder: '', files: [file], isCore: false });
     const originalText = 'Use sample.md, safe defaults and local diagrams.Keep A & B, <limits>, \u00a9 and escaped *literal* markers.';
     const prompt = generatePrompt(change.name, change, [{ ...suggestion, originalText }]);
-    assert.ok(prompt.includes(`**File:** \`${file.absolutePath}\` (line 5)`));
+    assert.ok(prompt.includes('**File:** `diagrams.md` (line 5)'));
     assert.ok(prompt.includes(originalText));
     assert.ok(!prompt.includes('Not identified'));
   }
@@ -128,7 +161,7 @@ test('formatted spec deltas resolve and ambiguous files never select the first f
     operations: [],
   }];
   const formatted = { ...suggestion, originalText: 'Use safe defaults.' };
-  assert.ok(generatePrompt(change.name, change, [formatted]).includes(`**File:** \`${absolutePath}\` (line 3)`));
+  assert.ok(generatePrompt(change.name, change, [formatted]).includes('**File:** `specs/access/spec.md` (line 3)'));
   change.files[0].content = 'Use safe defaults.';
   assert.match(generatePrompt(change.name, change, [formatted]), /\*\*File:\*\* Not identified/);
 });
@@ -138,7 +171,7 @@ test('nested and repeated blocks identify a unique file without inventing a sour
     const change = changeAt('D:\\project\\openspec\\changes\\same-change', '\\');
     change.files[0].content = content;
     const prompt = generatePrompt(change.name, change, [{ ...suggestion, originalText: 'Nested item' }]);
-    assert.ok(prompt.includes(`**File:** \`${change.files[0].absolutePath}\`\n`));
+    assert.ok(prompt.includes('**File:** `proposal.md`\n'));
     assert.ok(!prompt.includes('(line'));
   }
   const change = changeAt('D:\\project\\openspec\\changes\\same-change', '\\');

@@ -3,7 +3,7 @@ import type { Change } from './api';
 import { findMarkdownTextLocation } from './markdown';
 
 interface SuggestionLocation {
-  absolutePath: string;
+  filePath: string;
   lineNumber?: number;
 }
 
@@ -14,23 +14,26 @@ function findSuggestionLocation(
   originalText: string,
   change: Change
 ): SuggestionLocation | null {
-  const sources = new Map<string, string>();
+  const sources = new Map<string, { filePath: string; content: string }>();
   for (const group of change.fileGroups) {
     for (const file of group.files) {
       if (file.type === 'markdown' && file.content) {
-        sources.set(file.absolutePath, file.content);
+        sources.set(file.absolutePath, { filePath: file.path, content: file.content });
       }
     }
   }
 
   for (const delta of change.specDeltas) {
-    sources.set(delta.absolutePath, delta.content);
+    sources.set(delta.absolutePath, {
+      filePath: `specs/${delta.capability}/spec.md`,
+      content: delta.content,
+    });
   }
 
   const locations: SuggestionLocation[] = [];
-  for (const [absolutePath, content] of sources) {
+  for (const { filePath, content } of sources.values()) {
     const location = findMarkdownTextLocation(content, originalText);
-    if (location) locations.push({ absolutePath, ...location });
+    if (location) locations.push({ filePath, ...location });
   }
   return locations.length === 1 ? locations[0] : null;
 }
@@ -48,7 +51,7 @@ export function generatePrompt(
       const location = findSuggestionLocation(suggestion.originalText, change);
 
       const locationInfo = location
-        ? `**File:** \`${location.absolutePath}\`${location.lineNumber ? ` (line ${location.lineNumber})` : ''}\n`
+        ? `**File:** \`${location.filePath}\`${location.lineNumber ? ` (line ${location.lineNumber})` : ''}\n`
         : '**File:** Not identified; search for the original text within the change directory above.\n';
 
       return `### Suggestion ${index + 1}
