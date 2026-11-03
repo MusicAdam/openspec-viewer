@@ -6,6 +6,16 @@ marked.setOptions({
   breaks: true,
 });
 
+const defaultRenderer = new marked.Renderer();
+marked.use({
+  renderer: {
+    code(token) {
+      if (token.lang?.split(/\s+/)[0].toLowerCase() !== 'mermaid') return false;
+      return defaultRenderer.code(token).replace('<pre>', '<pre data-mermaid="true">');
+    },
+  },
+});
+
 /**
  * Render markdown to HTML
  */
